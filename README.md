@@ -1,36 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# VOID - Espace Client
 
-## Getting Started
+Application d'espace client pour les clients de la société VOID, développée avec Next.js, Tailwind CSS et Supabase.
 
-First, run the development server:
+## Fonctionnalités
+
+- Authentification avec Supabase Auth
+- Gestion des utilisateurs (CRUD)
+- Rôles utilisateurs (Admin, Gestionnaire, Client)
+- Interface responsive avec Tailwind CSS
+- Profils utilisateurs
+
+## Prérequis
+
+- Node.js 18+ 
+- npm ou yarn
+- Compte Supabase
+
+## Configuration
+
+1. Clonez ce dépôt :
+```bash
+git clone <url-du-repo>
+cd void-space
+```
+
+2. Installez les dépendances :
+```bash
+npm install
+# ou
+yarn install
+```
+
+3. Créez un fichier `.env.local` à la racine du projet avec les variables suivantes :
+```
+NEXT_PUBLIC_SUPABASE_URL=https://dgmpjhqdnyvivmtzpzwo.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRnbXBqaHFkbnl2aXZtdHpwendvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyOTUxMzksImV4cCI6MjA1Njg3MTEzOX0.LAGC-eh54yzd73ArovpN7X9RiBilBmqnQRLJLANn4Ng
+```
+
+4. Configurez la base de données Supabase :
+   - Connectez-vous à votre projet Supabase
+   - Exécutez le script SQL dans `supabase/schema.sql` dans l'éditeur SQL de Supabase
+
+## Démarrage
+
+Pour démarrer l'application en mode développement :
 
 ```bash
 npm run dev
-# or
+# ou
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ouvrez [http://localhost:3000](http://localhost:3000) dans votre navigateur.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## Structure du projet
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+void-space/
+├── app/                    # Pages Next.js (App Router)
+│   ├── (protected)/        # Pages protégées par authentification
+│   │   ├── admin/          # Pages d'administration
+│   │   ├── profile/        # Page de profil utilisateur
+│   │   └── page.js         # Dashboard
+│   └── login/              # Page de connexion
+├── components/             # Composants React réutilisables
+│   ├── Navbar.jsx          # Barre de navigation
+│   ├── Sidebar.jsx         # Barre latérale
+│   └── UserProfile.jsx     # Composant de profil utilisateur
+├── utils/                  # Utilitaires
+│   └── supabase/           # Configuration Supabase
+│       ├── client.js       # Client Supabase côté navigateur
+│       └── server.js       # Client Supabase côté serveur
+├── middleware.js           # Middleware Next.js pour l'authentification
+└── supabase/               # Configuration Supabase
+    └── schema.sql          # Schéma de base de données
+```
 
-## Learn More
+## Utilisateurs par défaut
 
-To learn more about Next.js, take a look at the following resources:
+Un utilisateur administrateur a été créé :
+- Email: mn@void.fr
+- Mot de passe: mehdi123
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Déploiement
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Cette application peut être déployée sur Vercel, Netlify ou tout autre service compatible avec Next.js.
 
-## Deploy on Vercel
+```bash
+npm run build
+# ou
+yarn build
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Licence
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Propriétaire - Tous droits réservés
