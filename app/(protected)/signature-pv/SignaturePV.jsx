@@ -58,7 +58,7 @@ function SignaturePV() {
         month: "long",
         year: "numeric",
       });
-    } catch (e) {
+    } catch {
       return "Date invalide";
     }
   };
@@ -67,135 +67,13 @@ function SignaturePV() {
   const fetchDocuments = async () => {
     try {
       setLoading(true);
-
-      // Récupérer l'utilisateur connecté
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError) throw userError;
-
-      if (!user) {
-        throw new Error("Utilisateur non connecté");
+      // Fetch documents from the server API
+      const response = await fetch('/api/documents');
+      if (!response.ok) {
+        throw new Error('Failed to fetch documents');
       }
-
-      console.log("Utilisateur connecté:", user.id);
-
-      // Récupérer les PV de l'utilisateur (créés par lui ou assignés à lui)
-      const { data: pvs, error: pvsError } = await supabase
-        .from("pv_documents")
-        .select(
-          `
-          *,
-          pv_files(*),
-          pv_reminders(*)
-        `
-        )
-        .or(`assigned_to.eq.${user.id},created_by.eq.${user.id}`)
-        .order("created_at", { ascending: false });
-
-      if (pvsError) throw pvsError;
-
-      console.log("PVs récupérés:", pvs.length);
-
-      if (pvs.length === 0) {
-        setDocuments([]);
-        setLoading(false);
-        return;
-      }
-
-      // Récupérer les informations des utilisateurs
-      const userIds = new Set();
-      pvs.forEach((pv) => {
-        userIds.add(pv.created_by);
-        userIds.add(pv.assigned_to);
-        pv.pv_reminders.forEach((reminder) => {
-          userIds.add(reminder.sent_by);
-          userIds.add(reminder.sent_to);
-        });
-      });
-
-      console.log(
-        "Récupération des profils pour les IDs:",
-        Array.from(userIds)
-      );
-
-      const { data: users, error: usersError } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", Array.from(userIds));
-
-      if (usersError) throw usersError;
-
-      console.log("Profils récupérés:", users);
-
-      // Créer un dictionnaire d'utilisateurs pour un accès rapide
-      const userMap = {};
-      users.forEach((user) => {
-        userMap[user.id] = user;
-      });
-
-      // Transformer les données pour correspondre à la structure attendue par le composant
-      const formattedDocuments = pvs.map((pv) => {
-        // Trouver le fichier signé s'il existe
-        const signedFile = pv.pv_files.find((file) => file.is_signed);
-        const originalFile = pv.pv_files.find((file) => !file.is_signed);
-
-        console.log("Fichiers pour PV", pv.id, ":", pv.pv_files);
-
-        // Récupérer les informations des utilisateurs
-        const createdByUser = userMap[pv.created_by];
-        const assignedToUser = userMap[pv.assigned_to];
-
-        // Formater le nom d'affichage (préférer le nom complet, sinon l'ID)
-        const getDisplayName = (user) => {
-          if (!user) return "Utilisateur inconnu";
-          return (
-            user.full_name ||
-            `Utilisateur ${user.id.substring(0, 8)}` ||
-            "Utilisateur inconnu"
-          );
-        };
-
-        return {
-          id: pv.id,
-          title: pv.title,
-          description: pv.description,
-          project: pv.project_name,
-          date: pv.due_date,
-          status: pv.status,
-          created_at: pv.created_at,
-          created_by: pv.created_by,
-          created_by_name: getDisplayName(createdByUser),
-          assigned_to: pv.assigned_to,
-          assigned_to_name: getDisplayName(assignedToUser),
-          files: pv.pv_files,
-          fileUrl: originalFile ? originalFile.storage_path : null,
-          hasUploadedSignedVersion: !!signedFile,
-          signedFileUrl: signedFile ? signedFile.storage_path : null,
-          reminders: pv.pv_reminders.map((reminder) => ({
-            id: reminder.id,
-            date: reminder.sent_date,
-            type: reminder.reminder_type,
-            sender: {
-              id: reminder.sent_by,
-              name: getDisplayName(userMap[reminder.sent_by]),
-              role: "Gestionnaire",
-            },
-            recipient: {
-              id: reminder.sent_to,
-              name: getDisplayName(userMap[reminder.sent_to]),
-              phone: "+33 6 XX XX XX XX", // À remplacer par la vraie donnée si disponible
-            },
-            message: reminder.message,
-            response: reminder.response,
-            response_date: reminder.response_date,
-          })),
-        };
-      });
-
-      setDocuments(formattedDocuments);
+      const documents = await response.json();
+      setDocuments(documents);
     } catch (error) {
       console.error("Erreur lors de la récupération des PV:", error);
       setError(error.message);
@@ -415,7 +293,7 @@ function SignaturePV() {
   }, []);
 
   // Fonction pour télécharger un fichier
-  const downloadFile = async (storagePath, fileName) => {
+  const downloadFile = async (storagePath) => {
     try {
       console.log("Téléchargement du fichier:", storagePath);
 
@@ -484,9 +362,6 @@ function SignaturePV() {
 
       console.log("File uploaded successfully:", uploadData);
 
-      // Construire l'URL complète du fichier
-      const fileUrl = `https://dgmpjhqdnyvivmtzpzwo.supabase.co/storage/v1/object/public/files/${filePath}`;
-
       // Créer une entrée dans la table pv_files
       const { error: fileError } = await supabase.from("pv_files").insert({
         pv_id: docId,
@@ -553,100 +428,82 @@ function SignaturePV() {
     e.preventDefault();
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      // Appeler l'API de transfert
+      const response = await fetch('/api/documents/transfer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          pvId: selectedDocId,
+          recipientName: transferData.recipientName,
+          recipientEmail: transferData.recipientEmail,
+          recipientPhone: transferData.recipientPhone,
+          recipientCompany: transferData.recipientCompany,
+          reason: transferData.reason,
+        }),
+        credentials: 'include', // Important pour envoyer les cookies
+      });
 
-      if (!user) {
-        throw new Error("Utilisateur non connecté");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur lors du transfert du PV');
       }
 
-      // Récupérer l'utilisateur par email
-      // const { data: recipientData, error: recipientError } = await supabase
-      //   .from('profiles')
-      //   .select('id')
-      //   .eq('email', transferData.recipientEmail)
-      //   .single()
-
-      // if (recipientError) {
-      //   // Si l'utilisateur n'existe pas, on peut créer un nouvel utilisateur ici
-      //   // ou simplement enregistrer le transfert avec les informations fournies
-      //   throw new Error('Destinataire non trouvé')
-      // }
-
-      // Créer le transfert
-      const { error: transferError } = await supabase
-        .from("pv_transfers")
-        .insert({
-          pv_id: selectedDocId,
-          from_user: user.id,
-          to_user: null,
-          reason: transferData.reason,
-          recipient_name: transferData.recipientName,
-          recipient_email: transferData.recipientEmail,
-          recipient_phone: transferData.recipientPhone,
-          recipient_company: transferData.recipientCompany,
-          status: "pending",
-        });
-
-      if (transferError) throw transferError;
-
-      // Mettre à jour le PV
-      // const { error: updateError } = await supabase
-      //   .from('pv_documents')
-      //   .update({ assigned_to: recipientData.id })
-      //   .eq('id', selectedDocId)
-
-      // if (updateError) throw updateError
+      const { data } = await response.json();
+      console.log('Transfert créé avec succès:', data);
 
       // Fermer la modal et rafraîchir les données
       closeTransferModal();
       await fetchDocuments();
+
+      // Afficher un message de succès
+      alert('PV transféré avec succès');
     } catch (error) {
-      console.error("Erreur lors du transfert du PV:", error);
-      alert("Erreur lors du transfert du PV: " + error.message);
+      console.error('Erreur lors du transfert du PV:', error);
+      alert('Erreur lors du transfert du PV: ' + error.message);
     }
   };
 
   // Fonction pour créer une relance
-  const createReminder = async (docId, type) => {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+  // const createReminder = async (docId, type) => {
+  //   try {
+  //     const {
+  //       data: { user },
+  //     } = await supabase.auth.getUser();
 
-      if (!user) {
-        throw new Error("Utilisateur non connecté");
-      }
+  //     if (!user) {
+  //       throw new Error("Utilisateur non connecté");
+  //     }
 
-      // Récupérer le document
-      const document = documents.find((doc) => doc.id === docId);
-      if (!document) throw new Error("Document non trouvé");
+  //     // Récupérer le document
+  //     const document = documents.find((doc) => doc.id === docId);
+  //     if (!document) throw new Error("Document non trouvé");
 
-      // Créer un message par défaut
-      const defaultMessage =
-        type === "email"
-          ? `Bonjour, merci de bien vouloir signer et retourner le PV "${document.title}" dès que possible.`
-          : `Rappel concernant la signature du PV "${document.title}".`;
+  //     // Créer un message par défaut
+  //     const defaultMessage =
+  //       type === "email"
+  //         ? `Bonjour, merci de bien vouloir signer et retourner le PV "${document.title}" dès que possible.`
+  //         : `Rappel concernant la signature du PV "${document.title}".`;
 
-      // Créer la relance
-      const { error } = await supabase.from("pv_reminders").insert({
-        pv_id: docId,
-        sent_by: user.id,
-        sent_to: document.assigned_to,
-        message: defaultMessage,
-        reminder_type: type,
-      });
+  //     // Créer la relance
+  //     const { error } = await supabase.from("pv_reminders").insert({
+  //       pv_id: docId,
+  //       sent_by: user.id,
+  //       sent_to: document.assigned_to,
+  //       message: defaultMessage,
+  //       reminder_type: type,
+  //     });
 
-      if (error) throw error;
+  //     if (error) throw error;
 
-      // Rafraîchir les données
-      await fetchDocuments();
-    } catch (error) {
-      console.error("Erreur lors de la création de la relance:", error);
-      alert("Erreur lors de la création de la relance");
-    }
-  };
+  //     // Rafraîchir les données
+  //     await fetchDocuments();
+  //   } catch (error) {
+  //     console.error("Erreur lors de la création de la relance:", error);
+  //     alert("Erreur lors de la création de la relance");
+  //   }
+  // };
 
   // Afficher un message de chargement
   if (loading) {
@@ -679,7 +536,7 @@ function SignaturePV() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">
-          Documents à valider oo
+          Documents à valider
         </h1>
 
         {/* Afficher le statut admin pour débogage */}
@@ -714,27 +571,26 @@ function SignaturePV() {
                     Projet: {doc.project} | Date limite:{" "}
                     {doc.date ? formatDate(doc.date) : "Non définie"} | Statut:{" "}
                     <span
-                      className={`font-medium ${
-                        doc.status === "draft"
-                          ? "text-gray-600"
-                          : doc.status === "sent"
+                      className={`font-medium ${doc.status === "draft"
+                        ? "text-gray-600"
+                        : doc.status === "sent"
                           ? "text-blue-600"
                           : doc.status === "signed"
-                          ? "text-green-600"
-                          : doc.status === "validated"
-                          ? "text-purple-600"
-                          : "text-red-600"
-                      }`}
+                            ? "text-green-600"
+                            : doc.status === "validated"
+                              ? "text-purple-600"
+                              : "text-red-600"
+                        }`}
                     >
                       {doc.status === "draft"
                         ? "Brouillon"
                         : doc.status === "sent"
-                        ? "Envoyé"
-                        : doc.status === "signed"
-                        ? "Signé"
-                        : doc.status === "validated"
-                        ? "Validé"
-                        : "Rejeté"}
+                          ? "Envoyé"
+                          : doc.status === "signed"
+                            ? "Signé"
+                            : doc.status === "validated"
+                              ? "Validé"
+                              : "Rejeté"}
                     </span>
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
@@ -771,24 +627,26 @@ function SignaturePV() {
 
                   {doc.status !== "validated" && doc.status !== "rejected" && (
                     <div className="relative">
-                      <input
-                        type="file"
-                        id={`signed-doc-${doc.id}`}
-                        className="sr-only"
-                        accept=".pdf"
-                        onChange={(e) => handleFileUpload(doc.id, e)}
-                      />
+                      {doc.hasUploadedSignedVersion && (
+                        <input
+                          type="file"
+                          id={`signed-doc-${doc.id}`}
+                          disabled={doc.hasUploadedSignedVersion}
+                          className="sr-only"
+                          accept=".pdf"
+                          onChange={(e) => handleFileUpload(doc.id, e)}
+                        />
+                      )}
                       <label
                         htmlFor={`signed-doc-${doc.id}`}
                         className={`inline-flex items-center px-4 py-2 border rounded-md shadow-sm text-sm font-medium 
-                          ${
-                            doc.hasUploadedSignedVersion
-                              ? "border-green-300 text-green-700 bg-green-50 hover:bg-green-100"
-                              : "border-void text-void bg-white hover:bg-gray-50"
+                          ${doc.hasUploadedSignedVersion
+                            ? "border-green-300 text-green-700 bg-green-50 hover:bg-green-100"
+                            : "border-void text-void bg-white hover:bg-gray-50"
                           } cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-void`}
                       >
                         {uploadProgress[doc.id] !== undefined &&
-                        uploadProgress[doc.id] !== null ? (
+                          uploadProgress[doc.id] !== null ? (
                           <span>Upload: {uploadProgress[doc.id]}%</span>
                         ) : doc.hasUploadedSignedVersion ? (
                           <>
@@ -1136,10 +994,9 @@ function SignaturePV() {
                     <label
                       htmlFor="pv_file"
                       className={`inline-flex items-center px-4 py-2 border rounded-md shadow-sm text-sm font-medium 
-                        ${
-                          newPvFile
-                            ? "border-green-300 text-green-700 bg-green-50 hover:bg-green-100"
-                            : "border-void text-void bg-white hover:bg-gray-50"
+                        ${newPvFile
+                          ? "border-green-300 text-green-700 bg-green-50 hover:bg-green-100"
+                          : "border-void text-void bg-white hover:bg-gray-50"
                         } cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-void`}
                     >
                       {newPvFileUploading ? (

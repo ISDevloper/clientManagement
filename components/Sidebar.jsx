@@ -9,13 +9,11 @@ import {
   FolderIcon,
   WrenchScrewdriverIcon,
   CalculatorIcon,
-  UserIcon,
   UserGroupIcon,
   Cog6ToothIcon,
 } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import Image from 'next/image'
 
 function classNames(...classes) {
   return classes.filter(Boolean).join(' ')
@@ -30,15 +28,15 @@ export default function Sidebar({ user, children }) {
     { name: 'Tableau de bord', href: '/', icon: HomeIcon },
     { name: 'Projets en cours', href: '/projects', icon: FolderIcon },
     { name: 'TMA', href: '/tma', icon: WrenchScrewdriverIcon },
-    { name: 'Devis', href: '/quotes', icon: CalculatorIcon },
+    { name: 'Devis', href: '/quotation', icon: CalculatorIcon },
     { name: 'Signatures PV', href: '/signature-pv', icon: DocumentCheckIcon },
-    { name: 'Paiements', href: '/payments', icon: CreditCardIcon },
+    { name: 'Paiements', href: '/payements', icon: CreditCardIcon },
   ]
 
   // Ajouter les liens d'administration si l'utilisateur est admin ou gestionnaire
   if (user?.user_metadata?.role === 'admin' || user?.user_metadata?.role === 'gestionnaire') {
     navigation.push(
-      { name: 'Utilisateurs', href: '/admin/users', icon: UserGroupIcon },
+      { name: 'Utilisateurs', href: '/profiles', icon: UserGroupIcon },
       { name: 'Paramètres', href: '/admin/settings', icon: Cog6ToothIcon }
     )
   }
@@ -92,7 +90,7 @@ export default function Sidebar({ user, children }) {
                       </button>
                     </div>
                   </Transition.Child>
-                  
+
                   <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white px-6 pb-4">
                     <div className="flex h-16 shrink-0 items-center">
                       <span className="text-void font-bold text-2xl">VOID</span>
@@ -117,7 +115,7 @@ export default function Sidebar({ user, children }) {
                         )
                       })}
                     </nav>
-                    
+
                     <div className="border-t border-gray-200 pt-4">
                       <div className="flex items-center space-x-3 px-3 py-2">
                         <div className="h-8 w-8 rounded-full bg-void flex items-center justify-center text-white">
@@ -163,7 +161,7 @@ export default function Sidebar({ user, children }) {
                 )
               })}
             </nav>
-            
+
             <div className="border-t border-gray-200 pt-4">
               <div className="flex items-center space-x-3 px-3 py-2">
                 <div className="h-8 w-8 rounded-full bg-void flex items-center justify-center text-white">
@@ -198,7 +196,7 @@ export default function Sidebar({ user, children }) {
             <div className="flex flex-1 justify-center lg:justify-start">
               <span className="text-void font-bold text-xl">VOID</span>
             </div>
-            
+
             {/* Profil pour mobile */}
             <div className="flex items-center">
               <div className="h-8 w-8 rounded-full bg-void flex items-center justify-center text-white">
@@ -207,7 +205,7 @@ export default function Sidebar({ user, children }) {
             </div>
           </div>
 
-          <main className="py-10">
+          <main className="py-10 pt-24">
             <div className="px-4 sm:px-6 lg:px-8">{children}</div>
           </main>
         </div>

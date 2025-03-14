@@ -16,6 +16,7 @@ export default [
   {
     rules: {
       "react/prop-types": "off",  // Disable the prop-types rule
+      "react/react-in-jsx-scope": "off",
     },
   },
 ];
