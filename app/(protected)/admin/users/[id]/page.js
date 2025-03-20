@@ -116,9 +116,9 @@ export default function EditUser({ params }) {
     <div className="pt-8">
       <div className="sm:flex sm:items-center">
         <div className="sm:flex-auto">
-          <h1 className="text-2xl font-semibold text-gray-900">Modifier l'Utilisateur</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Modifier l&apos;Utilisateur</h1>
           <p className="mt-2 text-sm text-gray-700">
-            Modifiez les informations de l'utilisateur.
+            Modifiez les informations de l&apos;utilisateur.
           </p>
         </div>
         <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
@@ -150,7 +150,7 @@ export default function EditUser({ params }) {
             <div className="ml-3">
               <h3 className="text-sm font-medium text-green-800">Succès</h3>
               <div className="mt-2 text-sm text-green-700">
-                <p>L'utilisateur a été mis à jour avec succès.</p>
+                <p>L&apos;utilisateur a été mis à jour avec succès.</p>
               </div>
             </div>
           </div>

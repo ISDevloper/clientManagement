@@ -1,9 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
-export async function GET(request) {
+export async function GET() {
   // Vérifier l'authentification
+  // eslint-disable-next-line no-undef
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  // eslint-disable-next-line no-undef
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   
   if (!supabaseServiceKey) {
@@ -24,7 +26,7 @@ export async function GET(request) {
     })
 
     // Vérifier si la table autologin_tokens existe
-    const { data: tableExists, error: tableExistsError } = await supabase
+    const { error: tableExistsError } = await supabase
       .from('autologin_tokens')
       .select('id')
       .limit(1)

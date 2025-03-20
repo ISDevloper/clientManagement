@@ -146,7 +146,7 @@ export default function NewUser() {
             <div className="ml-3">
               <h3 className="text-sm font-medium text-green-800">Succès</h3>
               <div className="mt-2 text-sm text-green-700">
-                <p>L'utilisateur a été créé avec succès.</p>
+                <p>L&apos;utilisateur a été créé avec succès.</p>
               </div>
             </div>
           </div>

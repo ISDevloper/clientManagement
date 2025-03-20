@@ -1,7 +1,6 @@
 import { ArrowPathIcon, BuildingOfficeIcon, EnvelopeIcon, EyeIcon, MagnifyingGlassIcon, PencilSquareIcon, ShieldCheckIcon, TrashIcon, UserIcon, UserPlusIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline"
 import Link from "next/link"
 import { useState, useEffect } from "react"
-import { prepareProfileForAPI } from "@/utils/profiles/formatters"
 
 export default function Profiles() {
     const [users, setUsers] = useState([])

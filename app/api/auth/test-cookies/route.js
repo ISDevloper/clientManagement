@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
-export async function GET(request) {
+export async function GET() {
   try {
     // Récupérer tous les cookies
     const cookieStore = cookies()
@@ -16,7 +16,9 @@ export async function GET(request) {
     
     // Créer un client Supabase
     const supabase = createServerClient(
+      // eslint-disable-next-line no-undef
       process.env.NEXT_PUBLIC_SUPABASE_URL,
+      // eslint-disable-next-line no-undef
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       {
         cookies: {

@@ -243,7 +243,7 @@ export default function UsersAdmin() {
                             disabled={generatingLink && linkUserId === user.id}
                           >
                             <LinkIcon className="h-5 w-5" aria-hidden="true" />
-                            <span className="sr-only">Générer un lien d'autologin pour {user.email}</span>
+                            <span className="sr-only">Générer un lien d&apos;autologin pour {user.email}</span>
                           </button>
                         )}
                         <button
@@ -276,12 +276,12 @@ export default function UsersAdmin() {
               </div>
               <div className="mt-3 text-center sm:mt-5">
                 <h3 className="text-base font-semibold leading-6 text-gray-900">
-                  Lien d'autologin généré
+                  Lien d&apos;autologin généré
                 </h3>
                 <div className="mt-2">
                   <p className="text-sm text-gray-500">
-                    Ce lien permet à l'utilisateur de se connecter automatiquement à la page de signature de PV.
-                    Il est valable pendant 7 jours et ne peut être utilisé qu'une seule fois.
+                    Ce lien permet à l&apos;utilisateur de se connecter automatiquement à la page de signature de PV.
+                    Il est valable pendant 7 jours et ne peut être utilisé qu&apos;une seule fois.
                   </p>
                 </div>
                 {warning && (

@@ -6,7 +6,9 @@ export async function GET(request, { params }) {
   const id = params.id
   
   // Vérifier l'authentification
+  // eslint-disable-next-line no-undef
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  // eslint-disable-next-line no-undef
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   
   if (!supabaseServiceKey) {
@@ -62,7 +64,9 @@ export async function PATCH(request, { params }) {
   const id = params.id
   
   // Vérifier l'authentification
+  // eslint-disable-next-line no-undef
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  // eslint-disable-next-line no-undef
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   
   if (!supabaseServiceKey) {
@@ -122,7 +126,9 @@ export async function DELETE(request, { params }) {
   const id = params.id
   
   // Vérifier l'authentification
+  // eslint-disable-next-line no-undef
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  // eslint-disable-next-line no-undef
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   
   if (!supabaseServiceKey) {

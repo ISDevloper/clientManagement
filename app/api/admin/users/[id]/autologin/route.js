@@ -14,7 +14,9 @@ export async function POST(request, { params }) {
   console.log('Génération d\'un lien d\'autologin pour l\'utilisateur:', id)
   
   // Vérifier l'authentification
+  // eslint-disable-next-line no-undef
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  // eslint-disable-next-line no-undef
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   
   if (!supabaseServiceKey) {
@@ -138,6 +140,7 @@ export async function POST(request, { params }) {
     }
     
     // Construire l'URL d'autologin
+    // eslint-disable-next-line no-undef
     const autologinUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/signature-pv?session=${token}`
     
     console.log('Lien d\'autologin généré avec succès:', autologinUrl)

@@ -11,7 +11,6 @@ import {
   PaperAirplaneIcon,
   CheckCircleIcon,
   XCircleIcon,
-  DocumentArrowDownIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline'
 
@@ -291,7 +290,7 @@ L'équipe VOID`)
                 <>
                   <h3 className="font-medium text-gray-900 mb-2">Document de devis</h3>
                   <div>
-                    <p className="text-sm text-yellow-600 mb-2">Aucun document de devis n'a été uploadé.</p>
+                    <p className="text-sm text-yellow-600 mb-2">Aucun document de devis n&apos;a été uploadé.</p>
                     <div>
                       <label className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer">
                         <ArrowUpTrayIcon className="h-5 w-5 mr-2" />

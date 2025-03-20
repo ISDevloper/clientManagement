@@ -15,7 +15,9 @@ export async function GET(request) {
   }
   
   // Vérifier l'authentification
+  // eslint-disable-next-line no-undef
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  // eslint-disable-next-line no-undef
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   
   if (!supabaseServiceKey) {
@@ -83,7 +85,7 @@ export async function GET(request) {
     }
     
     // Insérer le token dans la base de données
-    const { data: tokenData, error: insertError } = await supabase
+    const { error: insertError } = await supabase
       .from('autologin_tokens')
       .insert({
         user_id: user.id,
