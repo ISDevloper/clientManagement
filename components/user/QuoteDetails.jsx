@@ -1,7 +1,8 @@
+'use client'
 import { useState } from 'react'
-import { 
-  DocumentIcon, 
-  ArrowDownTrayIcon, 
+import { useDownloadFile } from '@/hooks/useDownloadFile'
+import {
+  ArrowDownTrayIcon,
   ArrowUpTrayIcon,
   EnvelopeIcon,
   PhoneIcon,
@@ -9,12 +10,16 @@ import {
   XMarkIcon,
   PaperAirplaneIcon,
   CheckCircleIcon,
-  XCircleIcon
+  XCircleIcon,
+  DocumentArrowDownIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline'
 
 function QuoteDetails({ quote, onClose, onUpdateQuote }) {
   const [showEmailForm, setShowEmailForm] = useState(false)
   const [showPhoneForm, setShowPhoneForm] = useState(false)
+  const [isAccepting, setIsAccepting] = useState(false)
+  const [isRejecting, setIsRejecting] = useState(false)
   const [emailContent, setEmailContent] = useState(`Bonjour,
 
 Nous vous rappelons que le devis "${quote.reference}" d'un montant de ${quote.amount.toLocaleString()}€ est en attente de validation.
@@ -22,12 +27,12 @@ Date d'expiration : ${new Date(quote.expiryDate).toLocaleDateString()}
 
 Cordialement,
 L'équipe VOID`)
-  
+
   const [phoneNote, setPhoneNote] = useState('')
   const [uploadedQuoteFile, setUploadedQuoteFile] = useState(null)
 
   // État pour les informations de transfert
-  const hasBeenTransferred = quote.transferredTo && quote.transferredTo.name
+  const hasBeenTransferred = quote.transfer_name
 
   const handleQuoteFileUpload = (e) => {
     if (e.target.files[0]) {
@@ -46,67 +51,176 @@ L'équipe VOID`)
     }
   }
 
-  const handleSendEmailReminder = () => {
-    const updatedQuote = {
-      ...quote,
-      reminders: [
-        ...(quote.reminders || []),
-        {
-          id: (quote.reminders?.length || 0) + 1,
+  const handleSendEmailReminder = async () => {
+    try {
+      const response = await fetch(`/api/quotations/${quote.id}/reminder`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           type: 'email',
-          date: new Date().toISOString(),
           content: emailContent
-        }
-      ]
-    }
-    onUpdateQuote(updatedQuote)
-    setShowEmailForm(false)
-  }
+        })
+      });
 
-  const handleSavePhoneReminder = () => {
-    if (phoneNote.trim()) {
+      if (!response.ok) {
+        throw new Error('Failed to send email reminder');
+      }
+
+      const newReminder = await response.json();
       const updatedQuote = {
         ...quote,
-        reminders: [
-          ...(quote.reminders || []),
-          {
-            id: (quote.reminders?.length || 0) + 1,
+        reminders: [...(quote.reminders || []), newReminder.data]
+      };
+      onUpdateQuote(updatedQuote);
+      setShowEmailForm(false);
+    } catch (error) {
+      console.error('Error sending email reminder:', error);
+      // You may want to show an error message to the user here
+    }
+  }
+
+  const handleSavePhoneReminder = async () => {
+    if (phoneNote.trim()) {
+      try {
+        const response = await fetch(`/api/quotations/${quote.id}/reminder`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
             type: 'phone',
-            date: new Date().toISOString(),
             content: phoneNote
-          }
-        ]
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save phone reminder');
+        }
+
+        const newReminder = await response.json();
+        const updatedQuote = {
+          ...quote,
+          reminders: [...(quote.reminders || []), newReminder.data]
+        };
+        onUpdateQuote(updatedQuote);
+        setPhoneNote('');
+        setShowPhoneForm(false);
+      } catch (error) {
+        console.error('Error saving phone reminder:', error);
+        // You may want to show an error message to the user here
       }
-      onUpdateQuote(updatedQuote)
-      setPhoneNote('')
-      setShowPhoneForm(false)
     }
   }
 
-  const handleAcceptQuote = () => {
-    const updatedQuote = {
-      ...quote,
-      status: 'accepted',
-      acceptedAt: new Date().toISOString()
+  const handleAcceptQuote = async () => {
+    try {
+      setIsAccepting(true);
+      const response = await fetch(`/api/quotations/${quote.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'valid',
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to accept quotation');
+      }
+      const updatedQuoteData = await response.json();
+      onUpdateQuote(updatedQuoteData);
+    } catch (error) {
+      console.error('Error accepting quote:', error);
+      // You may want to show an error message to the user here
+    } finally {
+      setIsAccepting(false);
     }
-    onUpdateQuote(updatedQuote)
   }
 
-  const handleRejectQuote = () => {
-    const updatedQuote = {
-      ...quote,
-      status: 'rejected',
-      rejectedAt: new Date().toISOString()
+  const handleRejectQuote = async () => {
+    try {
+      setIsRejecting(true);
+      const response = await fetch(`/api/quotations/${quote.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'rejected',
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to reject quotation');
+      }
+      const updatedQuoteData = await response.json();
+      onUpdateQuote(updatedQuoteData);
+    } catch (error) {
+      console.error('Error rejecting quote:', error);
+      // You may want to show an error message to the user here
+    } finally {
+      setIsRejecting(false);
     }
-    onUpdateQuote(updatedQuote)
   }
+
+  // Fonction pour formater les dates
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR');
+  };
+
+  // Fonction pour formater les montants
+  const formatAmount = (amount) => {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(amount);
+  };
+
+  // Fonction pour obtenir la classe de statut
+  const getStatusClass = (status) => {
+    switch (status) {
+      case 'valid':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
+      case 'expired':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Fonction pour obtenir le libellé de statut
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'valid':
+        return 'Validé';
+      case 'pending':
+        return 'En attente';
+      case 'rejected':
+        return 'Refusé';
+      case 'expired':
+        return 'Expiré';
+      default:
+        return status;
+    }
+  };
+
+  const { downloadFile, isLoading } = useDownloadFile()
 
   return (
     <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-start mb-6">
           <h2 className="text-xl font-bold text-gray-900">Devis {quote.reference}</h2>
-          <button 
+          <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500"
           >
@@ -121,91 +235,88 @@ L'équipe VOID`)
               <h3 className="font-medium text-gray-900 mb-2">Informations générales</h3>
               <div className="space-y-2">
                 <p className="text-sm text-gray-600">
-                  <span className="font-medium">Projet :</span> {quote.project}
+                  <span className="font-medium">Référence :</span> {quote.reference}
                 </p>
                 <p className="text-sm text-gray-600">
-                  <span className="font-medium">Montant :</span> {quote.amount.toLocaleString()}€
+                  <span className="font-medium">Titre :</span> {quote.name}
                 </p>
                 <p className="text-sm text-gray-600">
-                  <span className="font-medium">Date de création :</span> {new Date(quote.date).toLocaleDateString()}
+                  <span className="font-medium">Montant :</span> {formatAmount(quote.amount)}
                 </p>
                 <p className="text-sm text-gray-600">
-                  <span className="font-medium">Date d'expiration :</span> {new Date(quote.expiryDate).toLocaleDateString()}
+                  <span className="font-medium">Date d&apos;émission :</span> {formatDate(quote.created_at)}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">Valide jusqu&apos;au :</span> {formatDate(quote.due_date)}
                 </p>
                 <p className="text-sm text-gray-600">
                   <span className="font-medium">Statut :</span>{' '}
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    quote.status === 'accepted' ? 'bg-green-100 text-green-800' : 
-                    quote.status === 'rejected' ? 'bg-red-100 text-red-800' : 
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {quote.status === 'accepted' ? 'Accepté' : 
-                     quote.status === 'rejected' ? 'Refusé' : 
-                     'En attente'}
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(quote.status)}`}>
+                    {getStatusLabel(quote.status)}
                   </span>
                 </p>
                 {quote.acceptedAt && (
                   <p className="text-sm text-gray-600">
-                    <span className="font-medium">Date d'acceptation :</span> {new Date(quote.acceptedAt).toLocaleDateString()}
+                    <span className="font-medium">Date d&apos;acceptation :</span> {formatDate(quote.acceptedAt)}
                   </p>
                 )}
                 {quote.rejectedAt && (
                   <p className="text-sm text-gray-600">
-                    <span className="font-medium">Date de refus :</span> {new Date(quote.rejectedAt).toLocaleDateString()}
+                    <span className="font-medium">Date de refus :</span> {formatDate(quote.rejectedAt)}
                   </p>
                 )}
               </div>
             </div>
 
             <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="font-medium text-gray-900 mb-2">Document de devis</h3>
-              {quote.fileUrl ? (
-                <div className="flex items-center justify-between">
-                  <a
-                    href={quote.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                  >
-                    <DocumentIcon className="h-5 w-5 mr-2" />
-                    Visualiser
-                  </a>
-                  <a
-                    href={quote.fileUrl}
-                    download
-                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                  >
-                    <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
-                    Télécharger
-                  </a>
+              {quote.document_url ? (
+                <div className='flex gap-2 items-center justify-between'>
+                  <h3 className="font-medium text-gray-900">Document de devis</h3>
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => downloadFile(quote.document_url)}
+                      disabled={isLoading}
+                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? (
+                        <ArrowPathIcon className="h-5 w-5 mr-2 animate-spin" />
+                      ) : (
+                        <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
+                      )}
+                      {isLoading ? 'Téléchargement...' : 'Télécharger'}
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <div>
-                  <p className="text-sm text-yellow-600 mb-2">Aucun document de devis n'a été uploadé.</p>
+                <>
+                  <h3 className="font-medium text-gray-900 mb-2">Document de devis</h3>
                   <div>
-                    <label className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer">
-                      <ArrowUpTrayIcon className="h-5 w-5 mr-2" />
-                      Uploader le devis
-                      <input 
-                        type="file" 
-                        className="hidden" 
-                        onChange={handleQuoteFileUpload}
-                        accept=".pdf"
-                      />
-                    </label>
-                  </div>
-                  {uploadedQuoteFile && (
-                    <div className="mt-2">
-                      <p className="text-sm text-green-600">Fichier sélectionné : {uploadedQuoteFile.name}</p>
-                      <button
-                        onClick={handleSaveQuoteFile}
-                        className="mt-2 inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-void hover:bg-void-light"
-                      >
-                        Enregistrer
-                      </button>
+                    <p className="text-sm text-yellow-600 mb-2">Aucun document de devis n'a été uploadé.</p>
+                    <div>
+                      <label className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer">
+                        <ArrowUpTrayIcon className="h-5 w-5 mr-2" />
+                        Uploader le devis
+                        <input
+                          type="file"
+                          className="hidden"
+                          onChange={handleQuoteFileUpload}
+                          accept=".pdf"
+                        />
+                      </label>
                     </div>
-                  )}
-                </div>
+                    {uploadedQuoteFile && (
+                      <div className="mt-2">
+                        <p className="text-sm text-green-600">Fichier sélectionné : {uploadedQuoteFile.name}</p>
+                        <button
+                          onClick={handleSaveQuoteFile}
+                          className="mt-2 inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-void hover:bg-void-light"
+                        >
+                          Enregistrer
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
             </div>
 
@@ -215,17 +326,27 @@ L'équipe VOID`)
                 <div className="flex space-x-3">
                   <button
                     onClick={handleAcceptQuote}
-                    className="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+                    disabled={isAccepting || isRejecting}
+                    className="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <CheckCircleIcon className="h-5 w-5 mr-2" />
-                    Marquer comme accepté
+                    {isAccepting ? (
+                      <ArrowPathIcon className="h-5 w-5 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircleIcon className="h-5 w-5 mr-2" />
+                    )}
+                    {isAccepting ? 'Validation...' : 'Marquer comme accepté'}
                   </button>
                   <button
                     onClick={handleRejectQuote}
-                    className="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
+                    disabled={isAccepting || isRejecting}
+                    className="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <XCircleIcon className="h-5 w-5 mr-2" />
-                    Marquer comme refusé
+                    {isRejecting ? (
+                      <ArrowPathIcon className="h-5 w-5 mr-2 animate-spin" />
+                    ) : (
+                      <XCircleIcon className="h-5 w-5 mr-2" />
+                    )}
+                    {isRejecting ? 'Refus...' : 'Marquer comme refusé'}
                   </button>
                 </div>
               </div>
@@ -237,44 +358,43 @@ L'équipe VOID`)
             <div className="bg-gray-50 p-4 rounded-lg">
               <h3 className="font-medium text-gray-900 mb-2">Transfert</h3>
               {hasBeenTransferred ? (
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-600">
-                    Ce devis a été transféré à :
-                  </p>
-                  <div className="flex items-start space-x-3">
-                    <UserIcon className="h-5 w-5 text-gray-400 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">{quote.transferredTo.name}</p>
-                      <p className="text-xs text-gray-500">{quote.transferredTo.position}</p>
-                    </div>
+                <div>
+                  <div className="flex items-center space-x-2 mb-3 pb-2 border-b border-gray-200">
+                    <p className="text-sm font-medium text-gray-900">Destinataire du devis</p>
                   </div>
-                  {quote.transferredTo.email && (
-                    <div className="flex items-start space-x-3">
-                      <EnvelopeIcon className="h-5 w-5 text-gray-400 mt-0.5" />
-                      <div>
-                        <p className="text-sm">{quote.transferredTo.email}</p>
-                      </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center text-sm">
+                      <UserIcon className="h-4 w-4 text-gray-400 mr-2" />
+                      <span className="font-medium text-gray-900">{quote.transfer_name}</span>
                     </div>
-                  )}
-                  {quote.transferredTo.phone && (
-                    <div className="flex items-start space-x-3">
-                      <PhoneIcon className="h-5 w-5 text-gray-400 mt-0.5" />
-                      <div>
-                        <p className="text-sm">{quote.transferredTo.phone}</p>
+
+                    {quote.transfer_email && (
+                      <div className="flex items-center text-sm">
+                        <EnvelopeIcon className="h-4 w-4 text-gray-400 mr-2" />
+                        <span className="text-gray-600">{quote.transfer_email}</span>
                       </div>
-                    </div>
-                  )}
+                    )}
+
+                    {quote.transfer_phone && (
+                      <div className="flex items-center text-sm">
+                        <PhoneIcon className="h-4 w-4 text-gray-400 mr-2" />
+                        <span className="text-gray-600">{quote.transfer_phone}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
-                <p className="text-sm text-gray-600">
-                  Ce devis n'a pas été transféré à une autre personne.
-                </p>
+                <div className="flex items-center space-x-2 text-gray-500">
+                  <UserIcon className="h-5 w-5" />
+                  <p className="text-sm">Ce devis n&apos;a pas été transféré</p>
+                </div>
               )}
             </div>
 
             <div className="bg-gray-50 p-4 rounded-lg">
               <h3 className="font-medium text-gray-900 mb-2">Relances</h3>
-              
+
               {quote.status === 'pending' && (
                 <div className="flex space-x-2 mb-4">
                   <button
@@ -350,7 +470,7 @@ L'équipe VOID`)
 
               <div className="space-y-3 max-h-60 overflow-y-auto">
                 {quote.reminders && quote.reminders.length > 0 ? (
-                  quote.reminders.sort((a, b) => new Date(b.date) - new Date(a.date)).map(reminder => (
+                  quote.reminders.map(reminder => (
                     <div key={reminder.id} className="flex items-start space-x-3 p-2 border-l-2 border-void">
                       <div className="flex-shrink-0 h-8 w-8 rounded-full bg-void-light flex items-center justify-center">
                         {reminder.type === 'email' ? (
@@ -365,7 +485,7 @@ L'équipe VOID`)
                             Relance {reminder.type === 'email' ? 'par email' : 'téléphonique'}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {new Date(reminder.date).toLocaleString()}
+                            {new Date(reminder.created_at).toLocaleString()}
                           </p>
                         </div>
                         <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">

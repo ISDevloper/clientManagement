@@ -1,15 +1,20 @@
+'use client'
 import { useState } from 'react'
-import { 
-  PlusIcon, 
-  PencilIcon, 
-  CheckCircleIcon, 
-  XCircleIcon,
+import {
+  PlusIcon,
+  EyeIcon,
   DocumentTextIcon,
-  DocumentArrowDownIcon
+  ChevronLeftIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/outline'
+import QuoteDetails from './QuoteDetails'
+import AddQuoteModal from './AddQuoteModal'
 
-function QuotesTab({ user, quotes, onUpdateQuote, onCreateQuote }) {
+function QuotesTab({ quotes, onUpdateQuote, onCreateQuote, isLoading = false }) {
   const [showAddQuoteModal, setShowAddQuoteModal] = useState(false)
+  const [selectedQuote, setSelectedQuote] = useState(null)
+  const [quotesPage, setQuotesPage] = useState(1)
+  const [quotesPerPage] = useState(5)
   const [newQuote, setNewQuote] = useState({
     reference: '',
     title: '',
@@ -17,6 +22,12 @@ function QuotesTab({ user, quotes, onUpdateQuote, onCreateQuote }) {
     validUntil: '',
     fileUrl: ''
   })
+
+  // Pagination logic
+  const indexOfLastQuote = quotesPage * quotesPerPage;
+  const indexOfFirstQuote = indexOfLastQuote - quotesPerPage;
+  const currentQuotes = quotes.slice(indexOfFirstQuote, indexOfLastQuote);
+  const totalQuotesPages = Math.ceil(quotes.length / quotesPerPage);
 
   // Fonction pour formater les dates
   const formatDate = (dateString) => {
@@ -36,7 +47,7 @@ function QuotesTab({ user, quotes, onUpdateQuote, onCreateQuote }) {
   // Fonction pour obtenir la classe de statut
   const getStatusClass = (status) => {
     switch (status) {
-      case 'accepted':
+      case 'valid':
         return 'bg-green-100 text-green-800';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
@@ -65,53 +76,8 @@ function QuotesTab({ user, quotes, onUpdateQuote, onCreateQuote }) {
     }
   };
 
-  // Fonction pour marquer un devis comme accepté
-  const handleAcceptQuote = (quoteId) => {
-    const quote = quotes.find(q => q.id === quoteId);
-    if (!quote) return;
-    
-    onUpdateQuote({
-      ...quote,
-      status: 'accepted',
-      acceptedAt: new Date().toISOString()
-    });
-  };
-
-  // Fonction pour marquer un devis comme refusé
-  const handleRejectQuote = (quoteId) => {
-    const quote = quotes.find(q => q.id === quoteId);
-    if (!quote) return;
-    
-    onUpdateQuote({
-      ...quote,
-      status: 'rejected',
-      rejectedAt: new Date().toISOString()
-    });
-  };
-
-  // Fonction pour ajouter un nouveau devis
-  const handleAddQuote = (e) => {
-    e.preventDefault();
-    
-    // Vérifier que les champs obligatoires sont remplis
-    if (!newQuote.reference || !newQuote.title || !newQuote.amount || !newQuote.validUntil) {
-      alert('Veuillez remplir tous les champs obligatoires');
-      return;
-    }
-    
-    // Créer un nouvel objet de devis
-    const quoteToCreate = {
-      reference: newQuote.reference,
-      title: newQuote.title,
-      amount: parseFloat(newQuote.amount),
-      validUntil: newQuote.validUntil,
-      fileUrl: newQuote.fileUrl || '/quotes/default.pdf'
-    };
-    
-    // Appeler la fonction de création de devis
+  const handleAddQuoteSubmit = (quoteToCreate) => {
     onCreateQuote(quoteToCreate);
-    
-    // Réinitialiser le formulaire
     setNewQuote({
       reference: '',
       title: '',
@@ -119,9 +85,12 @@ function QuotesTab({ user, quotes, onUpdateQuote, onCreateQuote }) {
       validUntil: '',
       fileUrl: ''
     });
-    
-    // Fermer le modal
     setShowAddQuoteModal(false);
+  };
+
+  const handleUpdateQuote = (updatedQuote) => {
+    const updatedQuotes = quotes.map(quote => quote.id === updatedQuote.id ? updatedQuote : quote);
+    onUpdateQuote(updatedQuotes);
   };
 
   return (
@@ -139,7 +108,50 @@ function QuotesTab({ user, quotes, onUpdateQuote, onCreateQuote }) {
       </div>
 
       <div className="border-t border-gray-200">
-        {quotes.length === 0 ? (
+        {isLoading ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Référence</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Titre</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date d&apos;émission</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valide jusqu&apos;au</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {[...Array(5)].map((_, index) => (
+                  <tr key={index} className="animate-pulse">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="h-4 bg-gray-200 rounded w-24"></div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="h-4 bg-gray-200 rounded w-32"></div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="h-4 bg-gray-200 rounded w-20"></div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="h-4 bg-gray-200 rounded w-24"></div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="h-4 bg-gray-200 rounded w-24"></div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="h-4 bg-gray-200 rounded w-16"></div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <div className="h-8 bg-gray-200 rounded w-20 ml-auto"></div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : quotes.length === 0 ? (
           <div className="px-4 py-5 sm:p-6 text-center text-gray-500">
             <DocumentTextIcon className="h-12 w-12 mx-auto text-gray-400" />
             <p className="mt-2 text-sm">Aucun devis disponible pour cet utilisateur.</p>
@@ -159,10 +171,10 @@ function QuotesTab({ user, quotes, onUpdateQuote, onCreateQuote }) {
                     Montant
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date d'émission
+                    Date d&apos;émission
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Valide jusqu'au
+                    Valide jusqu&apos;au
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Statut
@@ -173,22 +185,22 @@ function QuotesTab({ user, quotes, onUpdateQuote, onCreateQuote }) {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {quotes.map((quote) => (
+                {currentQuotes.map((quote) => (
                   <tr key={quote.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {quote.reference}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {quote.title}
+                      {quote.name}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatAmount(quote.amount)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(quote.date)}
+                      {formatDate(quote.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(quote.validUntil)}
+                      {formatDate(quote.due_date)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(quote.status)}`}>
@@ -196,41 +208,13 @@ function QuotesTab({ user, quotes, onUpdateQuote, onCreateQuote }) {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end space-x-2">
-                        {quote.status === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => handleAcceptQuote(quote.id)}
-                              className="text-green-600 hover:text-green-900"
-                              title="Accepter"
-                            >
-                              <CheckCircleIcon className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => handleRejectQuote(quote.id)}
-                              className="text-red-600 hover:text-red-900"
-                              title="Refuser"
-                            >
-                              <XCircleIcon className="h-5 w-5" />
-                            </button>
-                          </>
-                        )}
-                        <a
-                          href={quote.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Télécharger"
-                        >
-                          <DocumentArrowDownIcon className="h-5 w-5" />
-                        </a>
-                        <button
-                          className="text-void hover:text-void-dark"
-                          title="Modifier"
-                        >
-                          <PencilIcon className="h-5 w-5" />
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => setSelectedQuote(quote)}
+                        className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                      >
+                        <EyeIcon className="h-4 w-4 mr-1" />
+                        Détails
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -240,130 +224,90 @@ function QuotesTab({ user, quotes, onUpdateQuote, onCreateQuote }) {
         )}
       </div>
 
-      {/* Modal d'ajout de devis */}
-      {showAddQuoteModal && (
-        <div className="fixed inset-0 z-10 overflow-y-auto">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+      {/* Pagination */}
+      {!isLoading && quotes.length > 0 && (
+        <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+          <div className="flex-1 flex justify-between sm:hidden">
+            <button
+              onClick={() => setQuotesPage(Math.max(1, quotesPage - 1))}
+              disabled={quotesPage === 1}
+              className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            >
+              Précédent
+            </button>
+            <button
+              onClick={() => setQuotesPage(Math.min(totalQuotesPages, quotesPage + 1))}
+              disabled={quotesPage === totalQuotesPages}
+              className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            >
+              Suivant
+            </button>
+          </div>
+          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-gray-700">
+                Affichage de <span className="font-medium">{indexOfFirstQuote + 1}</span> à{' '}
+                <span className="font-medium">
+                  {Math.min(indexOfLastQuote, quotes.length)}
+                </span>{' '}
+                sur <span className="font-medium">{quotes.length}</span> devis
+              </p>
             </div>
-
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                      Ajouter un devis
-                    </h3>
-                    <div className="mt-4">
-                      <form onSubmit={handleAddQuote}>
-                        <div className="grid grid-cols-6 gap-6">
-                          <div className="col-span-6 sm:col-span-3">
-                            <label htmlFor="reference" className="block text-sm font-medium text-gray-700">
-                              Référence *
-                            </label>
-                            <input
-                              type="text"
-                              name="reference"
-                              id="reference"
-                              value={newQuote.reference}
-                              onChange={(e) => setNewQuote({...newQuote, reference: e.target.value})}
-                              className="mt-1 focus:ring-void focus:border-void block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                              required
-                            />
-                          </div>
-
-                          <div className="col-span-6 sm:col-span-3">
-                            <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
-                              Montant (€) *
-                            </label>
-                            <input
-                              type="number"
-                              name="amount"
-                              id="amount"
-                              value={newQuote.amount}
-                              onChange={(e) => setNewQuote({...newQuote, amount: e.target.value})}
-                              className="mt-1 focus:ring-void focus:border-void block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                              required
-                              min="0"
-                              step="0.01"
-                            />
-                          </div>
-
-                          <div className="col-span-6">
-                            <label htmlFor="title" className="block text-sm font-medium text-gray-700">
-                              Titre *
-                            </label>
-                            <input
-                              type="text"
-                              name="title"
-                              id="title"
-                              value={newQuote.title}
-                              onChange={(e) => setNewQuote({...newQuote, title: e.target.value})}
-                              className="mt-1 focus:ring-void focus:border-void block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                              required
-                            />
-                          </div>
-
-                          <div className="col-span-6">
-                            <label htmlFor="validUntil" className="block text-sm font-medium text-gray-700">
-                              Valide jusqu'au *
-                            </label>
-                            <input
-                              type="date"
-                              name="validUntil"
-                              id="validUntil"
-                              value={newQuote.validUntil}
-                              onChange={(e) => setNewQuote({...newQuote, validUntil: e.target.value})}
-                              className="mt-1 focus:ring-void focus:border-void block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                              required
-                            />
-                          </div>
-
-                          <div className="col-span-6">
-                            <label htmlFor="fileUrl" className="block text-sm font-medium text-gray-700">
-                              URL du fichier
-                            </label>
-                            <input
-                              type="text"
-                              name="fileUrl"
-                              id="fileUrl"
-                              value={newQuote.fileUrl}
-                              onChange={(e) => setNewQuote({...newQuote, fileUrl: e.target.value})}
-                              className="mt-1 focus:ring-void focus:border-void block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                              placeholder="/quotes/example.pdf"
-                            />
-                            <p className="mt-1 text-xs text-gray-500">
-                              Laissez vide pour utiliser l'URL par défaut
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
-                          <button
-                            type="submit"
-                            className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-void text-base font-medium text-white hover:bg-void-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-void sm:col-start-2 sm:text-sm"
-                          >
-                            Ajouter
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setShowAddQuoteModal(false)}
-                            className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-void sm:mt-0 sm:col-start-1 sm:text-sm"
-                          >
-                            Annuler
-                          </button>
-                        </div>
-                      </form>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div>
+              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <button
+                  onClick={() => setQuotesPage(Math.max(1, quotesPage - 1))}
+                  disabled={quotesPage === 1}
+                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                >
+                  <span className="sr-only">Précédent</span>
+                  <ChevronLeftIcon className="h-5 w-5" aria-hidden="true" />
+                </button>
+                {[...Array(totalQuotesPages)].map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setQuotesPage(i + 1)}
+                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${quotesPage === i + 1
+                      ? 'z-10 bg-void border-void text-white'
+                      : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                      }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setQuotesPage(Math.min(totalQuotesPages, quotesPage + 1))}
+                  disabled={quotesPage === totalQuotesPages}
+                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                >
+                  <span className="sr-only">Suivant</span>
+                  <ChevronRightIcon className="h-5 w-5" aria-hidden="true" />
+                </button>
+              </nav>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal d'ajout de devis */}
+      <AddQuoteModal
+        isOpen={showAddQuoteModal}
+        onClose={() => setShowAddQuoteModal(false)}
+        onSubmit={handleAddQuoteSubmit}
+        newQuote={newQuote}
+        setNewQuote={setNewQuote}
+      />
+
+      {/* Modal de détails du devis */}
+      {selectedQuote && (
+        <QuoteDetails
+          quote={selectedQuote}
+          onClose={() => setSelectedQuote(null)}
+          onUpdateQuote={(updatedQuote) => {
+            handleUpdateQuote(updatedQuote);
+            setSelectedQuote(updatedQuote);
+          }}
+        />
       )}
     </div>
   )

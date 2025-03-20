@@ -1,7 +1,7 @@
 import { ArrowPathIcon, BuildingOfficeIcon, EnvelopeIcon, EyeIcon, MagnifyingGlassIcon, PencilSquareIcon, ShieldCheckIcon, TrashIcon, UserIcon, UserPlusIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline"
 import Link from "next/link"
 import { useState, useEffect } from "react"
-import { normalizeProfileData, prepareProfileForAPI } from "@/utils/profiles/formatters"
+import { prepareProfileForAPI } from "@/utils/profiles/formatters"
 
 export default function Profiles() {
     const [users, setUsers] = useState([])
@@ -37,9 +37,8 @@ export default function Profiles() {
                     throw new Error(`Error: ${response.status}`)
                 }
                 const data = await response.json()
-                const normalizedData = normalizeProfileData(data.data)
-                setUsers(normalizedData)
-                setFilteredUsers(normalizedData)
+                setUsers(data.data)
+                setFilteredUsers(data.data)
                 setError(null)
             } catch (err) {
                 console.error('Failed to fetch profiles:', err)
@@ -133,51 +132,51 @@ export default function Profiles() {
         }
     }
 
-    const handleToggleStatus = async (userId) => {
-        try {
-            const userToUpdate = users.find(user => user.id === userId)
-            const newStatus = userToUpdate.status === 'active' ? 'inactive' : 'active'
+    // const handleToggleStatus = async (userId) => {
+    //     try {
+    //         const userToUpdate = users.find(user => user.id === userId)
+    //         const newStatus = userToUpdate.status === 'active' ? 'inactive' : 'active'
 
-            const response = await fetch(`/api/profiles/${userId}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ status: newStatus }),
-            })
+    //         const response = await fetch(`/api/profiles/${userId}`, {
+    //             method: 'PATCH',
+    //             headers: {
+    //                 'Content-Type': 'application/json',
+    //             },
+    //             body: JSON.stringify({ status: newStatus }),
+    //         })
 
-            if (!response.ok) {
-                throw new Error(`Error: ${response.status}`)
-            }
+    //         if (!response.ok) {
+    //             throw new Error(`Error: ${response.status}`)
+    //         }
 
-            const result = await response.json()
-            console.log('API Response for Status Update:', result)
+    //         const result = await response.json()
+    //         console.log('API Response for Status Update:', result)
 
-            // The API returns the updated profile in a nested 'profile' property
-            const updatedUser = result.profile || result
-            console.log('Updated User Data after Status Change:', updatedUser)
+    //         // The API returns the updated profile in a nested 'profile' property
+    //         const updatedUser = result.profile || result
+    //         console.log('Updated User Data after Status Change:', updatedUser)
 
-            // Normalize the updated user data
-            const normalizedUser = normalizeProfileData(updatedUser)
-            console.log('Normalized User with Updated Status:', normalizedUser)
+    //         // Normalize the updated user data
+    //         const normalizedUser = normalizeProfileData(updatedUser)
+    //         console.log('Normalized User with Updated Status:', normalizedUser)
 
-            // Update local state after successful API call
-            setUsers(prevUsers => {
-                const updatedUsers = prevUsers.map(user => {
-                    if (user.id === normalizedUser.id) {
-                        console.log('Replacing user after status change:', user, 'with:', normalizedUser)
-                        return normalizedUser
-                    }
-                    return user
-                })
-                console.log('Updated Users State after Status Change:', updatedUsers)
-                return updatedUsers
-            })
-        } catch (err) {
-            console.error('Failed to update user status:', err)
-            alert('Failed to update user status. Please try again.')
-        }
-    }
+    //         // Update local state after successful API call
+    //         setUsers(prevUsers => {
+    //             const updatedUsers = prevUsers.map(user => {
+    //                 if (user.id === normalizedUser.id) {
+    //                     console.log('Replacing user after status change:', user, 'with:', normalizedUser)
+    //                     return normalizedUser
+    //                 }
+    //                 return user
+    //             })
+    //             console.log('Updated Users State after Status Change:', updatedUsers)
+    //             return updatedUsers
+    //         })
+    //     } catch (err) {
+    //         console.error('Failed to update user status:', err)
+    //         alert('Failed to update user status. Please try again.')
+    //     }
+    // }
 
     const handleDeleteUser = async (userId) => {
         if (!confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
@@ -238,12 +237,12 @@ export default function Profiles() {
     const handleUpdateUser = async (e) => {
         e.preventDefault()
         try {
-            const response = await fetch(`/api/profiles`, {
+            const response = await fetch(`/api/profiles/${editingUser.id}`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(prepareProfileForAPI(editingUser)),
+                body: JSON.stringify(editingUser),
             })
 
             if (!response.ok) {
@@ -257,16 +256,14 @@ export default function Profiles() {
             const updatedUser = result.profile || result
             console.log('Updated User Data:', updatedUser)
 
-            // Normalize the updated user data
-            const normalizedUser = normalizeProfileData(updatedUser)
-            console.log('Normalized Updated User:', normalizedUser)
+
 
             // Update local state after successful API call
             setUsers(prevUsers => {
                 const updatedUsers = prevUsers.map(user => {
-                    if (user.id === normalizedUser.id) {
-                        console.log('Replacing user:', user, 'with:', normalizedUser)
-                        return normalizedUser
+                    if (user.id === updatedUser.id) {
+                        console.log('Replacing user:', user, 'with:', updatedUser)
+                        return updatedUser
                     }
                     return user
                 })
@@ -378,10 +375,10 @@ export default function Profiles() {
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">
                                             <div className="flex-shrink-0 h-10 w-10 rounded-full bg-void text-white flex items-center justify-center">
-                                                {user.name.charAt(0)}
+                                                {user.full_name?.charAt(0)}
                                             </div>
                                             <div className="ml-4">
-                                                <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                                                <div className="text-sm font-medium text-gray-900">{user.full_name || user.name}</div>
                                                 <div className="text-sm text-gray-500">{user.email}</div>
                                             </div>
                                         </div>
@@ -416,7 +413,7 @@ export default function Profiles() {
                                                 </button>
                                             )}
                                             <button
-                                                onClick={() => handleToggleStatus(user.id)}
+                                                // onClick={() => handleToggleStatus(user.id)}
                                                 className="text-gray-400 hover:text-void"
                                                 title={user.status === 'active' ? 'Désactiver' : 'Activer'}
                                             >
@@ -518,253 +515,282 @@ export default function Profiles() {
 
             {/* Modal d'ajout d'utilisateur */}
             {showAddUserModal && (
-                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-                        <h3 className="text-lg font-medium text-gray-900 mb-4">
-                            Ajouter un utilisateur
-                        </h3>
-                        <form onSubmit={handleAddUser} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Nom complet
-                                </label>
-                                <input
-                                    type="text"
-                                    value={newUser.name}
-                                    onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
-                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-void focus:border-void sm:text-sm"
-                                    required
-                                />
-                            </div>
+                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col">
+                        <div className="p-6 flex-shrink-0">
+                            <h3 className="text-lg font-medium text-gray-900 mb-4">
+                                Ajouter un utilisateur
+                            </h3>
+                        </div>
+                        <div className="p-6 pt-0 overflow-y-auto flex-1">
+                            <form onSubmit={handleAddUser} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Nom complet
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={newUser.name}
+                                        onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
+                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-void focus:border-void sm:text-sm"
+                                        required
+                                    />
+                                </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Email
-                                </label>
-                                <input
-                                    type="email"
-                                    value={newUser.email}
-                                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-void focus:border-void sm:text-sm"
-                                    required
-                                />
-                            </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Email
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={newUser.email}
+                                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-void focus:border-void sm:text-sm"
+                                        required
+                                    />
+                                </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Téléphone
-                                </label>
-                                <input
-                                    type="tel"
-                                    value={newUser.phone}
-                                    onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
-                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-void focus:border-void sm:text-sm"
-                                />
-                            </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Téléphone
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        value={newUser.phone}
+                                        onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-void focus:border-void sm:text-sm"
+                                    />
+                                </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Poste
-                                </label>
-                                <input
-                                    type="text"
-                                    value={newUser.poste}
-                                    onChange={(e) => setNewUser({ ...newUser, poste: e.target.value })}
-                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-void focus:border-void sm:text-sm"
-                                    placeholder="Ex: Directeur Commercial"
-                                />
-                            </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Poste
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={newUser.poste}
+                                        onChange={(e) => setNewUser({ ...newUser, poste: e.target.value })}
+                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-void focus:border-void sm:text-sm"
+                                        placeholder="Ex: Directeur Commercial"
+                                    />
+                                </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Adresse
-                                </label>
-                                <input
-                                    type="text"
-                                    value={newUser.address}
-                                    onChange={(e) => setNewUser({ ...newUser, address: e.target.value })}
-                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-void focus:border-void sm:text-sm"
-                                    placeholder="Adresse complète"
-                                />
-                            </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Adresse
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={newUser.address}
+                                        onChange={(e) => setNewUser({ ...newUser, address: e.target.value })}
+                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-void focus:border-void sm:text-sm"
+                                        placeholder="Adresse complète"
+                                    />
+                                </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Département
-                                </label>
-                                <input
-                                    type="text"
-                                    value={newUser.departement}
-                                    onChange={(e) => setNewUser({ ...newUser, departement: e.target.value })}
-                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-void focus:border-void sm:text-sm"
-                                    placeholder="Ex: Marketing"
-                                />
-                            </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Département
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={newUser.departement}
+                                        onChange={(e) => setNewUser({ ...newUser, departement: e.target.value })}
+                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-void focus:border-void sm:text-sm"
+                                        placeholder="Ex: Marketing"
+                                    />
+                                </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Entreprise
-                                </label>
-                                <input
-                                    type="text"
-                                    value={newUser.company}
-                                    onChange={(e) => setNewUser({ ...newUser, company: e.target.value })}
-                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-void focus:border-void sm:text-sm"
-                                    required
-                                />
-                            </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Entreprise
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={newUser.company}
+                                        onChange={(e) => setNewUser({ ...newUser, company: e.target.value })}
+                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-void focus:border-void sm:text-sm"
+                                        required
+                                    />
+                                </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Rôle
-                                </label>
-                                <select
-                                    value={newUser.role}
-                                    onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-void focus:border-void sm:text-sm"
-                                >
-                                    <option>Client</option>
-                                    <option>Gestionnaire</option>
-                                    <option>Administrateur</option>
-                                </select>
-                            </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Rôle
+                                    </label>
+                                    <select
+                                        value={newUser.role}
+                                        onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-void focus:border-void sm:text-sm"
+                                    >
+                                        <option>Client</option>
+                                        <option>Gestionnaire</option>
+                                        <option>Administrateur</option>
+                                    </select>
+                                </div>
 
-                            <div className="mt-4 bg-gray-50 p-4 rounded-md">
-                                <h4 className="text-sm font-medium text-gray-700 mb-2">Permissions par rôle</h4>
-                                <div className="space-y-2 text-sm text-gray-600">
-                                    <div className="flex items-center space-x-2">
-                                        <UserIcon className="h-4 w-4 text-green-500" />
-                                        <p><strong>Client</strong> : Accès aux projets, signatures, devis et paiements</p>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <BuildingOfficeIcon className="h-4 w-4 text-blue-500" />
-                                        <p><strong>Gestionnaire</strong> : Accès client + gestion des projets et TMA</p>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <ShieldCheckIcon className="h-4 w-4 text-purple-500" />
-                                        <p><strong>Administrateur</strong> : Accès complet + gestion des utilisateurs</p>
+                                <div className="mt-4 bg-gray-50 p-4 rounded-md">
+                                    <h4 className="text-sm font-medium text-gray-700 mb-2">Permissions par rôle</h4>
+                                    <div className="space-y-2 text-sm text-gray-600">
+                                        <div className="flex items-center space-x-2">
+                                            <UserIcon className="h-4 w-4 text-green-500" />
+                                            <p><strong>Client</strong> : Accès aux projets, signatures, devis et paiements</p>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <BuildingOfficeIcon className="h-4 w-4 text-blue-500" />
+                                            <p><strong>Gestionnaire</strong> : Accès client + gestion des projets et TMA</p>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <ShieldCheckIcon className="h-4 w-4 text-purple-500" />
+                                            <p><strong>Administrateur</strong> : Accès complet + gestion des utilisateurs</p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="flex justify-end space-x-3 mt-6">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowAddUserModal(false)}
-                                    className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-void"
-                                >
-                                    Annuler
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-void hover:bg-void-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-void"
-                                >
-                                    Ajouter
-                                </button>
-                            </div>
-                        </form>
+                                <div className="flex justify-end space-x-3 mt-6">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAddUserModal(false)}
+                                        className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-void"
+                                    >
+                                        Annuler
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-void hover:bg-void-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-void"
+                                    >
+                                        Ajouter
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
             )}
 
             {/* Modal de modification d'utilisateur */}
             {showEditUserModal && editingUser && (
-                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-                        <h3 className="text-lg font-medium text-gray-900 mb-4">
-                            Modifier l&apos;utilisateur
-                        </h3>
-                        <form onSubmit={handleUpdateUser} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Nom complet
-                                </label>
-                                <input
-                                    type="text"
-                                    value={editingUser.name}
-                                    onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
-                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-void focus:border-void sm:text-sm"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Téléphone
-                                </label>
-                                <input
-                                    type="tel"
-                                    value={editingUser.phone}
-                                    onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
-                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-void focus:border-void sm:text-sm"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Entreprise
-                                </label>
-                                <input
-                                    type="text"
-                                    value={editingUser.company}
-                                    onChange={(e) => setEditingUser({ ...editingUser, company: e.target.value })}
-                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-void focus:border-void sm:text-sm"
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Rôle
-                                </label>
-                                <select
-                                    value={editingUser.role}
-                                    onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
-                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:ring-void focus:border-void sm:text-sm"
-                                >
-                                    <option>Client</option>
-                                    <option>Gestionnaire</option>
-                                    <option>Administrateur</option>
-                                </select>
-                            </div>
-
-                            <div className="mt-4 bg-gray-50 p-4 rounded-md">
-                                <h4 className="text-sm font-medium text-gray-700 mb-2">Permissions par rôle</h4>
-                                <div className="space-y-2 text-sm text-gray-600">
-                                    <div className="flex items-center space-x-2">
-                                        <UserIcon className="h-4 w-4 text-green-500" />
-                                        <p><strong>Client</strong> : Accès aux projets, signatures, devis et paiements</p>
+                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col">
+                        <div className="p-6 flex-shrink-0 border-b border-gray-200">
+                            <h3 className="text-lg font-medium text-gray-900">
+                                Modifier l&apos;utilisateur
+                            </h3>
+                        </div>
+                        <div className="flex-1 overflow-y-auto">
+                            <div className="p-6">
+                                <form onSubmit={handleUpdateUser} className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Nom complet <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editingUser.full_name}
+                                            onChange={(e) => setEditingUser({ ...editingUser, full_name: e.target.value })}
+                                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-void focus:border-void sm:text-sm"
+                                            required
+                                            placeholder="Ex: John Doe"
+                                        />
                                     </div>
-                                    <div className="flex items-center space-x-2">
-                                        <BuildingOfficeIcon className="h-4 w-4 text-blue-500" />
-                                        <p><strong>Gestionnaire</strong> : Accès client + gestion des projets et TMA</p>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <ShieldCheckIcon className="h-4 w-4 text-purple-500" />
-                                        <p><strong>Administrateur</strong> : Accès complet + gestion des utilisateurs</p>
-                                    </div>
-                                </div>
-                            </div>
 
-                            <div className="flex justify-end space-x-3 mt-6">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setShowEditUserModal(false)
-                                        setEditingUser(null)
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Email <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="email"
+                                            value={editingUser.email}
+                                            onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-void focus:border-void sm:text-sm"
+                                            required
+                                            placeholder="Ex: john.doe@example.com"
+                                        />
+                                    </div>
 
-                                    }}
-                                    className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-void"
-                                >
-                                    Annuler
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-void hover:bg-void-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-void"
-                                >
-                                    Mettre à jour
-                                </button>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Téléphone
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            value={editingUser.phone}
+                                            onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
+                                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-void focus:border-void sm:text-sm"
+                                            placeholder="Ex: +33 6 12 34 56 78"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Entreprise <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editingUser.company}
+                                            onChange={(e) => setEditingUser({ ...editingUser, company: e.target.value })}
+                                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-void focus:border-void sm:text-sm"
+                                            required
+                                            placeholder="Ex: Acme Inc"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Rôle <span className="text-red-500">*</span>
+                                        </label>
+                                        <select
+                                            value={editingUser.role}
+                                            onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
+                                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-void focus:border-void sm:text-sm"
+                                            required
+                                        >
+                                            <option value="">Sélectionner un rôle</option>
+                                            <option>Client</option>
+                                            <option>Gestionnaire</option>
+                                            <option>Administrateur</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="mt-4 bg-gray-50 p-4 rounded-md">
+                                        <h4 className="text-sm font-medium text-gray-700 mb-2">Permissions par rôle</h4>
+                                        <div className="space-y-2 text-sm text-gray-600">
+                                            <div className="flex items-center space-x-2">
+                                                <UserIcon className="h-4 w-4 text-green-500" />
+                                                <p><strong>Client</strong> : Accès aux projets, signatures, devis et paiements</p>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <BuildingOfficeIcon className="h-4 w-4 text-blue-500" />
+                                                <p><strong>Gestionnaire</strong> : Accès client + gestion des projets et TMA</p>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <ShieldCheckIcon className="h-4 w-4 text-purple-500" />
+                                                <p><strong>Administrateur</strong> : Accès complet + gestion des utilisateurs</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-end space-x-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setShowEditUserModal(false)
+                                                setEditingUser(null)
+                                            }}
+                                            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-void"
+                                        >
+                                            Annuler
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-void hover:bg-void-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-void"
+                                        >
+                                            Mettre à jour
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             )}

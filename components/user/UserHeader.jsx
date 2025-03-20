@@ -1,8 +1,62 @@
-
+"use client"
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 
-function UserHeader({ user }) {
+function UserHeader({ userId }) {
+  const [isLoading, setIsLoading] = useState(true)
+  const [user, setUser] = useState({
+    id: 1,
+    name: '',
+    email: '',
+    phone: '',
+    company: '',
+    status: '',
+    role: ''
+  })
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      setIsLoading(true)
+      try {
+        const responseUser = await fetch(`/api/profiles/${userId}`);
+        const user = await responseUser.json();
+        setUser(user);
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchUser();
+  }, [userId]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-between animate-pulse">
+        <div className="flex items-center space-x-4">
+          <Link href="/profiles" className="text-gray-300">
+            <ArrowLeftIcon className="h-6 w-6" />
+          </Link>
+          <div>
+            <div className="h-8 w-48 bg-gray-200 rounded"></div>
+            <div className="flex items-center space-x-3 mt-2">
+              <div className="h-4 w-32 bg-gray-200 rounded"></div>
+              <span className="text-gray-300">•</span>
+              <div className="h-4 w-24 bg-gray-200 rounded"></div>
+              <span className="text-gray-300">•</span>
+              <div className="h-4 w-28 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className="h-6 w-16 bg-gray-200 rounded-full"></div>
+          <div className="h-6 w-24 bg-gray-200 rounded-full"></div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center space-x-4">
@@ -10,7 +64,7 @@ function UserHeader({ user }) {
           <ArrowLeftIcon className="h-6 w-6" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{user.name}</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{user.full_name}</h1>
           <div className="flex items-center space-x-3 text-sm text-gray-500">
             <span>{user.email}</span>
             {user.phone && (

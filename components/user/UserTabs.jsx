@@ -23,13 +23,13 @@ function UserTabs({ userId, activeTab }) {
     },
     {
       id: 'payments',
-      path: `/profiles/profile/${userId}/payments`,
+      path: `/profiles/profile/${userId}/payements`,
       icon: CreditCardIcon,
       label: 'Paiements'
     },
     {
       id: 'quotes',
-      path: `/profiles/profile/${userId}/quotes`,
+      path: `/profiles/profile/${userId}/quotations`,
       icon: CalculatorIcon,
       label: 'Devis'
     },

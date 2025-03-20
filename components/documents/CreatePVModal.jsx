@@ -1,8 +1,17 @@
 import { ArrowUpTrayIcon, XMarkIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
 
-function CreatePVModal({ newPV, onChangeNewPV, onFileChange, onCancel }) {
+function CreatePVModal({ onDocumentCreated, onCancel }) {
   const [profiles, setProfiles] = useState([])
+  const [newDocument, setNewDocument] = useState({
+    title: '',
+    project: '',
+    description: '',
+    due_date: '',
+    assigned_to: '',
+    file: null
+  });
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -28,31 +37,44 @@ function CreatePVModal({ newPV, onChangeNewPV, onFileChange, onCancel }) {
     fetchProfiles()
   }, [])
 
+  const handleDocumentChange = (updates) => {
+    const updatedDocument = { ...newDocument, ...updates };
+    setNewDocument(updatedDocument);
+  };
+
+  const onFileChange = (e) => {
+    if (e.target.files?.[0]) {
+      handleDocumentChange({ file: e.target.files[0] });
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsSubmitting(true)
 
     try {
       const formData = new FormData()
-      formData.append('title', newPV.title)
-      formData.append('project_name', newPV.project)
-      formData.append('description', newPV.description || '')
-      formData.append('due_date', newPV.due_date || '')
-      formData.append('assigned_to', newPV.assigned_to)
-      formData.append('pv_file', newPV.file)
+      formData.append('title', newDocument.title)
+      formData.append('project', newDocument.project)
+      formData.append('description', newDocument.description || '')
+      formData.append('due_date', newDocument.due_date || '')
+      formData.append('assigned_to', newDocument.assigned_to)
+      formData.append('file', newDocument.file)
 
       const response = await fetch('/api/documents', {
         method: 'POST',
         body: formData, // FormData will automatically set the correct Content-Type
       })
 
-      const data = await response.json()
+      const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create document')
+        throw new Error(result.error || 'Failed to create document')
       }
 
-      onCancel() // Close modal on success
+      onDocumentCreated(result.data)
+
+      onCancel()
     } catch (err) {
       setError(err.message)
     } finally {
@@ -93,8 +115,8 @@ function CreatePVModal({ newPV, onChangeNewPV, onFileChange, onCancel }) {
               <input
                 type="text"
                 id="title"
-                value={newPV.title}
-                onChange={(e) => onChangeNewPV({ ...newPV, title: e.target.value })}
+                value={newDocument.title}
+                onChange={(e) => handleDocumentChange({ title: e.target.value })}
                 required
                 placeholder="Ex: PV de réception - Phase 1"
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-void focus:border-void sm:text-sm"
@@ -111,8 +133,8 @@ function CreatePVModal({ newPV, onChangeNewPV, onFileChange, onCancel }) {
               <input
                 type="text"
                 id="project"
-                value={newPV.project}
-                onChange={(e) => onChangeNewPV({ ...newPV, project: e.target.value })}
+                value={newDocument.project}
+                onChange={(e) => handleDocumentChange({ project: e.target.value })}
                 required
                 placeholder="Ex: Projet de Rénovation Site Web"
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-void focus:border-void sm:text-sm"
@@ -128,8 +150,8 @@ function CreatePVModal({ newPV, onChangeNewPV, onFileChange, onCancel }) {
               </label>
               <textarea
                 id="description"
-                value={newPV.description}
-                onChange={(e) => onChangeNewPV({ ...newPV, description: e.target.value })}
+                value={newDocument.description}
+                onChange={(e) => handleDocumentChange({ description: e.target.value })}
                 rows={3}
                 placeholder="Décrivez brièvement l'objet du PV..."
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-void focus:border-void sm:text-sm"
@@ -146,8 +168,8 @@ function CreatePVModal({ newPV, onChangeNewPV, onFileChange, onCancel }) {
               <input
                 type="date"
                 id="due_date"
-                value={newPV.due_date || ''}
-                onChange={(e) => onChangeNewPV({ ...newPV, due_date: e.target.value })}
+                value={newDocument.due_date}
+                onChange={(e) => handleDocumentChange({ due_date: e.target.value })}
                 min={new Date().toISOString().split('T')[0]}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-void focus:border-void sm:text-sm"
               />
@@ -162,8 +184,8 @@ function CreatePVModal({ newPV, onChangeNewPV, onFileChange, onCancel }) {
               </label>
               <select
                 id="assigned_to"
-                value={newPV.assigned_to || ''}
-                onChange={(e) => onChangeNewPV({ ...newPV, assigned_to: e.target.value })}
+                value={newDocument.assigned_to}
+                onChange={(e) => handleDocumentChange({ assigned_to: e.target.value })}
                 required
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-void focus:border-void sm:text-sm"
               >
@@ -185,7 +207,7 @@ function CreatePVModal({ newPV, onChangeNewPV, onFileChange, onCancel }) {
 
             <div>
               <label
-                htmlFor="pv_file"
+                htmlFor="file"
                 className="block text-sm font-medium text-gray-700"
               >
                 Fichier PV <span className="text-red-500">*</span>
@@ -193,25 +215,25 @@ function CreatePVModal({ newPV, onChangeNewPV, onFileChange, onCancel }) {
               <div className="mt-1 flex items-center">
                 <input
                   type="file"
-                  id="pv_file"
-                  name="pv_file"
+                  id="file"
+                  name="file"
                   onChange={onFileChange}
                   accept=".pdf,.doc,.docx,.xls,.xlsx"
                   required
                   className="sr-only"
                 />
                 <label
-                  htmlFor="pv_file"
+                  htmlFor="file"
                   className={`inline-flex items-center px-4 py-2 border rounded-md shadow-sm text-sm font-medium 
-                    ${newPV.file
+                    ${newDocument.file
                       ? "border-green-300 text-green-700 bg-green-50 hover:bg-green-100"
                       : "border-void text-void bg-white hover:bg-gray-50"
                     } cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-void`}
                 >
-                  {newPV.file ? (
+                  {newDocument.file ? (
                     <>
                       <CheckCircleIcon className="h-5 w-5 mr-2" />
-                      {newPV.file.name}
+                      {newDocument.file.name}
                     </>
                   ) : (
                     <>
@@ -221,9 +243,9 @@ function CreatePVModal({ newPV, onChangeNewPV, onFileChange, onCancel }) {
                   )}
                 </label>
               </div>
-              {newPV.file ? (
+              {newDocument.file ? (
                 <p className="mt-2 text-xs text-gray-500">
-                  {(newPV.file.size / 1024 / 1024).toFixed(2)} MB
+                  {(newDocument.file.size / 1024 / 1024).toFixed(2)} MB
                 </p>
               ) : (
                 <p className="mt-2 text-xs text-gray-500">

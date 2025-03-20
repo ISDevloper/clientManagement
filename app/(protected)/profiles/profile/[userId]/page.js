@@ -1,27 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useParams, usePathname } from "next/navigation";
-import UserHeader from "@/components/user/UserHeader";
-import UserTabs from "@/components/user/UserTabs";
+import { useParams } from "next/navigation";
 import ProfileTab from "@/components/user/ProfileTab";
-import { prepareProfileForAPI, normalizeProfileData } from "@/utils/profiles/formatters";
 
 
 function UserProfile() {
-    const pathname = usePathname();
     const { userId } = useParams()
-
-
-    // Déterminer l'onglet actif en fonction de l'URL
-    const getActiveTab = () => {
-        if (pathname.includes("/documents")) return "documents";
-        if (pathname.includes("/payments")) return "payments";
-        if (pathname.includes("/projects")) return "projects";
-        if (pathname.includes("/quotes")) return "quotes";
-        return "profile"; // Par défaut
-    };
-
-    const activeTab = getActiveTab();
 
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -38,18 +22,16 @@ function UserProfile() {
                 }
 
                 const data = await response.json();
+
                 setUser({
                     id: data.id,
-                    name: data.full_name,
+                    full_name: data.full_name,
                     email: data.email,
                     phone: data.phone,
-                    role: data.role || "Client",
                     company: data.company,
-                    department: data.departement,
-                    position: data.poste,
-                    lastLogin: data.last_login,
-                    status: data.status || "active",
-                    createdAt: data.created_at,
+                    departement: data.departement,
+                    poste: data.poste,
+                    created_at: data.created_at,
                     address: data.address
 
                 });
@@ -70,12 +52,12 @@ function UserProfile() {
     // Fonction pour mettre à jour les informations de l'utilisateur
     const handleUpdateUser = async (updatedUserData) => {
         try {
-            const response = await fetch(`/api/profiles`, {
+            const response = await fetch(`/api/profiles/${userId}`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(prepareProfileForAPI(updatedUserData)),
+                body: JSON.stringify(updatedUserData)
             });
 
             if (!response.ok) {
@@ -83,7 +65,7 @@ function UserProfile() {
             }
 
             const updatedProfile = await response.json();
-            setUser(normalizeProfileData(updatedProfile.profile));
+            setUser(updatedProfile.profile)
         } catch (err) {
             console.error('Error updating user profile:', err);
             setError('Failed to update user profile');
@@ -106,18 +88,7 @@ function UserProfile() {
         return <div className="text-center text-gray-600 p-4">User not found</div>;
     }
 
-    return (
-        <div className="space-y-6">
-            {/* Header avec navigation */}
-            <UserHeader user={user} />
-            {/* Onglets de navigation */}
-            <UserTabs userId={userId} activeTab={activeTab} />
-            {/* Contenu du profil */}
-            <div className="mt-6">
-                <ProfileTab user={user} onUpdateUser={handleUpdateUser} />
-            </div>
-        </div>
-    );
+    return <ProfileTab user={user} onUpdateUser={handleUpdateUser} />
 }
 
 export default UserProfile;

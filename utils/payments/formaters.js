@@ -1,5 +1,5 @@
-export const formatPayements = (payement) => {
-  return payement.map((payement) => {
+export const formatPayements = (payements) => {
+  return payements.map((payement) => {
     return {
       id: payement.id,
       number: payement.project_name,
@@ -8,15 +8,17 @@ export const formatPayements = (payement) => {
       status: payement.status,
       project: payement.project_name,
       department: payement.service,
-      reminders: payement.payement_reminder.map((reminder) => {
+      reminders: payement.reminders.map((reminder) => {
         return {
           id: reminder.id,
           comment: reminder.comment,
+          type: reminder.type,
+          created_at: reminder.created_at,
           target: {
-            name: reminder.profiles.full_name,
-            phone: reminder.profiles.phone,
-            department: reminder.profiles.company,
-            created_at: reminder.profiles.created_at,
+            name: reminder.sent_by.full_name,
+            email: reminder.sent_by.email,
+            phone: reminder.sent_by.phone,
+            departement: reminder.sent_by.departement,
           },
         };
       }),

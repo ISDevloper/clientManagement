@@ -29,6 +29,19 @@ export const Payement = () => {
     setShowContactForm(true);
   };
 
+  const getStatusClass = (status) => {
+    switch (status) {
+      case 'paid':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'overdue':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   const handleSubmitContact = async (e) => {
     e.preventDefault();
     try {
@@ -79,7 +92,7 @@ export const Payement = () => {
         throw new Error("Failed to fetch payments");
       }
       const user = await authUserResponse.json();
-      const paymentResponse = await fetch(`/api/payements/${user.id}`);
+      const paymentResponse = await fetch(`/api/payements/client/${user.id}`);
       if (!paymentResponse.ok) {
         throw new Error("Failed to fetch payments");
       }
@@ -125,7 +138,7 @@ export const Payement = () => {
                           <h3 className="text-lg font-medium text-gray-900">
                             Facture {invoice.number}
                           </h3>
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(invoice.status)}`}>
                             {invoice.status}
                           </span>
                         </div>
@@ -185,7 +198,7 @@ export const Payement = () => {
                                     {reminder.target.name}
                                   </div>
                                   <div className="text-xs text-gray-500">
-                                    {new Date(reminder.target.created_at).toLocaleDateString(
+                                    {new Date(reminder.created_at).toLocaleDateString(
                                       "fr-FR",
                                       {
                                         day: "2-digit",
@@ -199,7 +212,7 @@ export const Payement = () => {
                                 <div className="mt-1">
                                   <div className="flex items-center text-sm text-gray-500">
                                     <UserIcon className="h-4 w-4 mr-1" />
-                                    {reminder.target.department}
+                                    {reminder.target.departement}
                                   </div>
                                   <div className="flex items-center text-sm text-gray-500">
                                     {reminder.type === "email" ? (
@@ -209,9 +222,9 @@ export const Payement = () => {
                                     )}
                                   </div>
                                 </div>
-                                {reminder.notes && (
+                                {reminder.comment && (
                                   <p className="mt-2 text-sm text-gray-600">
-                                    {reminder.notes}
+                                    {reminder.comment}
                                   </p>
                                 )}
                               </div>

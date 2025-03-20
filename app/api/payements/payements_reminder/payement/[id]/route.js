@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 
-export async function POST(req) {
+export async function GET(_, { params }) {
     try {
         const cookieStore = await cookies();
         const supabase = await createClient(cookieStore);
@@ -16,26 +16,11 @@ export async function POST(req) {
             );
         }
 
-        const body = await req.json();
-        const { payement_id, comment, type } = body;
+        const { id } = params;
 
-        if (!payement_id || !comment) {
-            return NextResponse.json(
-                { error: "Payment ID and comment are required" },
-                { status: 400 }
-            );
-        }
-
-        const { data: newReminder, error } = await supabase
+        // Fetch reminders for the payment
+        const { data: reminders, error } = await supabase
             .from('payement_reminder')
-            .insert([
-                {
-                    sent_by: user.id,
-                    payement_id,
-                    comment,
-                    type: type
-                }
-            ])
             .select(`
                 id,
                 comment,
@@ -48,21 +33,22 @@ export async function POST(req) {
                     created_at
                 )
             `)
-            .single();
+            .eq('payement_id', id)
+            .order('created_at', { ascending: false });
 
         if (error) {
-            console.error("Error creating payment reminder:", error);
+            console.error("Error fetching payment reminders:", error);
             return NextResponse.json(
-                { error: "Failed to create payment reminder" },
+                { error: "Failed to fetch payment reminders" },
                 { status: 500 }
             );
         }
 
-        return NextResponse.json(newReminder, { status: 201 });
+        return NextResponse.json(reminders);
     } catch (error) {
-        console.error("Error creating payment reminder:", error);
+        console.error("Error fetching payment reminders:", error);
         return NextResponse.json(
-            { error: "Failed to create payment reminder" },
+            { error: "Failed to fetch payment reminders" },
             { status: 500 }
         );
     }

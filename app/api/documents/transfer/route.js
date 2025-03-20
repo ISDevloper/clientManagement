@@ -45,17 +45,14 @@ export async function POST(request) {
 
         // Create the transfer record
         const { data: transfer, error: transferError } = await supabase
-            .from('pv_transfers')
+            .from('document_transfers')
             .insert({
-                pv_id: pvId,
-                from_user: user.id, // Using the authenticated user's ID
-                to_user: null, // Will be updated when recipient accepts the transfer
+                document_id: pvId,
                 recipient_name: recipientName,
                 recipient_email: recipientEmail,
                 recipient_phone: recipientPhone,
                 recipient_company: recipientCompany,
                 reason: reason,
-                status: 'pending'
             })
             .select()
             .single();
@@ -115,10 +112,9 @@ export async function GET(request) {
 
         // Get transfers for the specific document
         const { data: transfers, error: transferError } = await supabase
-            .from('pv_transfers')
+            .from('document_transfers')
             .select("recipient_name,recipient_email,recipient_phone,recipient_company,reason,transfer_date")
-            .eq('pv_id', documentId)
-            .order('transfer_date', { ascending: false });
+            .eq('document_id', documentId)
 
         if (transferError) {
             console.error('Error fetching transfers:', transferError);

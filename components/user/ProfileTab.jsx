@@ -28,23 +28,10 @@ function ProfileTab({ user, onUpdateUser }) {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-
-    // Gestion des champs imbriqués (comme address.city)
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      setEditedUser({
-        ...editedUser,
-        [parent]: {
-          ...editedUser[parent],
-          [child]: value
-        }
-      });
-    } else {
-      setEditedUser({
-        ...editedUser,
-        [name]: value
-      });
-    }
+    setEditedUser({
+      ...editedUser,
+      [name]: value
+    });
   };
 
   const handleSubmit = (e) => {
@@ -61,7 +48,7 @@ function ProfileTab({ user, onUpdateUser }) {
   // Vérifier si les projets existent avant d'essayer d'y accéder
   const activeProjects = user.projects ? user.projects.filter(p => p.status !== 'completed') : [];
   const completedProjects = user.projects ? user.projects.filter(p => p.status === 'completed') : [];
-
+  console.log(user)
   return (
     <div className="bg-white shadow rounded-lg">
       <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
@@ -85,7 +72,7 @@ function ProfileTab({ user, onUpdateUser }) {
                 <UserCircleIcon className="h-5 w-5 mr-2 text-gray-400" />
                 Nom complet
               </dt>
-              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{user.name || 'N/A'}</dd>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{user.full_name || 'N/A'}</dd>
             </div>
             <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500 flex items-center">
@@ -114,7 +101,7 @@ function ProfileTab({ user, onUpdateUser }) {
                   <BuildingOfficeIcon className="h-5 w-5 mr-2 text-gray-400" />
                   Département
                 </dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{user.department}</dd>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{user.departement}</dd>
               </div>
             )}
             {user.position && (
@@ -123,7 +110,16 @@ function ProfileTab({ user, onUpdateUser }) {
                   <UserCircleIcon className="h-5 w-5 mr-2 text-gray-400" />
                   Poste
                 </dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{user.position}</dd>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{user.poste}</dd>
+              </div>
+            )}
+            {user.poste && (
+              <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500 flex items-center">
+                  <UserCircleIcon className="h-5 w-5 mr-2 text-gray-400" />
+                  Poste
+                </dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{user.poste}</dd>
               </div>
             )}
             {user.address && (
@@ -133,11 +129,7 @@ function ProfileTab({ user, onUpdateUser }) {
                   Adresse
                 </dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {user.address.street && <div>{user.address.street}</div>}
-                  {user.address.city && user.address.postalCode && (
-                    <div>{user.address.postalCode} {user.address.city}</div>
-                  )}
-                  {user.address.country && <div>{user.address.country}</div>}
+                  {user.address && <div>{user.address}</div>}
                 </dd>
               </div>
             )}
@@ -147,7 +139,7 @@ function ProfileTab({ user, onUpdateUser }) {
                 {"Date d'inscription"}
               </dt>
               <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                {user.createdAt ? formatDate(user.createdAt) : 'N/A'}
+                {user.created_at && formatDate(user.created_at)}
               </dd>
             </div>
             <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
@@ -170,11 +162,11 @@ function ProfileTab({ user, onUpdateUser }) {
               </label>
               <input
                 type="text"
-                name="name"
-                id="name"
-                value={editedUser.name || ''}
+                name="full_name"
+                id="full_name"
+                value={editedUser.full_name || ''}
                 onChange={handleInputChange}
-                className="mt-1 focus:ring-void focus:border-void block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-void focus:border-void sm:text-sm"
               />
             </div>
 
@@ -188,7 +180,7 @@ function ProfileTab({ user, onUpdateUser }) {
                 id="email"
                 value={editedUser.email || ''}
                 onChange={handleInputChange}
-                className="mt-1 focus:ring-void focus:border-void block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-void focus:border-void sm:text-sm"
               />
             </div>
 
@@ -202,7 +194,7 @@ function ProfileTab({ user, onUpdateUser }) {
                 id="phone"
                 value={editedUser.phone || ''}
                 onChange={handleInputChange}
-                className="mt-1 focus:ring-void focus:border-void block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-void focus:border-void sm:text-sm"
               />
             </div>
 
@@ -216,7 +208,7 @@ function ProfileTab({ user, onUpdateUser }) {
                 id="company"
                 value={editedUser.company || ''}
                 onChange={handleInputChange}
-                className="mt-1 focus:ring-void focus:border-void block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-void focus:border-void sm:text-sm"
               />
             </div>
 
@@ -226,11 +218,11 @@ function ProfileTab({ user, onUpdateUser }) {
               </label>
               <input
                 type="text"
-                name="department"
-                id="department"
-                value={editedUser.department || ''}
+                name="departement"
+                id="departement"
+                value={editedUser.departement || ''}
                 onChange={handleInputChange}
-                className="mt-1 focus:ring-void focus:border-void block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-void focus:border-void sm:text-sm"
               />
             </div>
 
@@ -240,72 +232,43 @@ function ProfileTab({ user, onUpdateUser }) {
               </label>
               <input
                 type="text"
-                name="position"
-                id="position"
-                value={editedUser.position || ''}
+                name="poste"
+                id="poste"
+                value={editedUser.poste || ''}
                 onChange={handleInputChange}
-                className="mt-1 focus:ring-void focus:border-void block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-void focus:border-void sm:text-sm"
+              />
+            </div>
+
+            <div className="col-span-6 sm:col-span-3">
+              <label htmlFor="post" className="block text-sm font-medium text-gray-700">
+                Post
+              </label>
+              <input
+                type="text"
+                name="post"
+                id="post"
+                value={editedUser.post || ''}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-void focus:border-void sm:text-sm"
               />
             </div>
 
             {editedUser.address && (
-              <>
-                <div className="col-span-6">
-                  <label htmlFor="address.street" className="block text-sm font-medium text-gray-700">
-                    Rue
-                  </label>
-                  <input
-                    type="text"
-                    name="address.street"
-                    id="address.street"
-                    value={editedUser.address.street || ''}
-                    onChange={handleInputChange}
-                    className="mt-1 focus:ring-void focus:border-void block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                  />
-                </div>
-
-                <div className="col-span-6 sm:col-span-2">
-                  <label htmlFor="address.postalCode" className="block text-sm font-medium text-gray-700">
-                    Code postal
-                  </label>
-                  <input
-                    type="text"
-                    name="address.postalCode"
-                    id="address.postalCode"
-                    value={editedUser.address.postalCode || ''}
-                    onChange={handleInputChange}
-                    className="mt-1 focus:ring-void focus:border-void block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                  />
-                </div>
-
-                <div className="col-span-6 sm:col-span-2">
-                  <label htmlFor="address.city" className="block text-sm font-medium text-gray-700">
-                    Ville
-                  </label>
-                  <input
-                    type="text"
-                    name="address.city"
-                    id="address.city"
-                    value={editedUser.address.city || ''}
-                    onChange={handleInputChange}
-                    className="mt-1 focus:ring-void focus:border-void block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                  />
-                </div>
-
-                <div className="col-span-6 sm:col-span-2">
-                  <label htmlFor="address.country" className="block text-sm font-medium text-gray-700">
-                    Pays
-                  </label>
-                  <input
-                    type="text"
-                    name="address.country"
-                    id="address.country"
-                    value={editedUser.address.country || ''}
-                    onChange={handleInputChange}
-                    className="mt-1 focus:ring-void focus:border-void block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                  />
-                </div>
-              </>
+              <div className="col-span-6">
+                <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                  Adresse
+                </label>
+                <input
+                  type="text"
+                  name="address"
+                  id="address"
+                  value={editedUser.address || ''}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-void focus:border-void sm:text-sm"
+                  placeholder="Rue, Code postal, Ville, Pays"
+                />
+              </div>
             )}
           </div>
 

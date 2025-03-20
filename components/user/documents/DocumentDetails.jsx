@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react'
 import {
   DocumentIcon,
   PencilIcon,
-  ArrowDownTrayIcon,
-  ArrowUpTrayIcon,
   EnvelopeIcon,
   PhoneIcon,
   UserIcon,
@@ -11,8 +9,11 @@ import {
   PaperAirplaneIcon,
   BuildingOfficeIcon
 } from '@heroicons/react/24/outline'
+import { useDownloadFile } from '@/hooks/useDownloadFile'
+import SignedDocument from './SignedDocument'
 
 function DocumentDetails({ document, onClose, onUpdateDocument }) {
+  const { downloadFile, isLoading } = useDownloadFile()
   const [showEmailForm, setShowEmailForm] = useState(false)
   const [showPhoneForm, setShowPhoneForm] = useState(false)
   const [emailContent, setEmailContent] = useState(`Bonjour,
@@ -22,11 +23,12 @@ Merci de bien vouloir le signer dès que possible.
 
 Cordialement,
 L'équipe VOID`)
-
   const [phoneNote, setPhoneNote] = useState('')
-  const [uploadedSignedFile, setUploadedSignedFile] = useState(null)
   const [editedOriginalFile, setEditedOriginalFile] = useState(null)
   const [transfers, setTransfers] = useState([])
+  const [reminders, setReminders] = useState([])
+  const [loadingReminders, setLoadingReminders] = useState(true)
+  const [reminderError, setReminderError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -50,11 +52,25 @@ L'équipe VOID`)
     fetchTransfers();
   }, [document.id]);
 
-  const handleSignedFileUpload = (e) => {
-    if (e.target.files[0]) {
-      setUploadedSignedFile(e.target.files[0])
-    }
-  }
+  useEffect(() => {
+    const fetchReminders = async () => {
+      try {
+        const response = await fetch(`/api/documents/reminder/${document.id}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch reminders');
+        }
+        const data = await response.json();
+        setReminders(data);
+      } catch (err) {
+        setReminderError(err.message);
+        console.error('Error fetching reminders:', err);
+      } finally {
+        setLoadingReminders(false);
+      }
+    };
+
+    fetchReminders();
+  }, [document.id]);
 
   const handleOriginalFileEdit = (e) => {
     if (e.target.files[0]) {
@@ -62,47 +78,23 @@ L'équipe VOID`)
     }
   }
 
-  const handleSaveSignedFile = async () => {
-    if (uploadedSignedFile) {
-      try {
-        const formData = new FormData();
-        formData.append('documentId', document.id);
-        formData.append('signedFile', uploadedSignedFile);
-
-        const response = await fetch('/api/documents', {
-          method: 'PATCH',
-          body: formData
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to upload signed file');
-        }
-        setUploadedSignedFile(null);
-      } catch (error) {
-        console.error('Error uploading signed file:', error);
-        // You may want to show an error message to the user here
-      }
-    }
-  }
-
   const handleSaveEditedOriginalFile = async () => {
     if (editedOriginalFile) {
       try {
         const formData = new FormData();
-        formData.append('file', editedOriginalFile);
-        formData.append('id', document.file.id);
-        formData.append('isSigned', false);
+        formData.append('original_file', editedOriginalFile);
+        formData.append('id', document.id);
 
-        const response = await fetch('/api/documents/fileEdit', {
-          method: 'POST',
+        const response = await fetch('/api/documents/edit-original', {
+          method: 'PATCH',
           body: formData
         });
 
         if (!response.ok) {
           throw new Error('Failed to upload file');
         }
-        onUpdateDocument();
-        onClose()
+        const new_document = await response.json();
+        onUpdateDocument(new_document);
         setEditedOriginalFile(null);
       } catch (error) {
         console.error('Error uploading file:', error);
@@ -111,60 +103,58 @@ L'équipe VOID`)
     }
   }
 
-  const handleSendEmailReminder = () => {
-    const updatedDocument = {
-      ...document,
-      reminders: [
-        ...(document.reminders || []),
-        {
-          id: (document.reminders?.length || 0) + 1,
-          type: 'email',
-          date: new Date().toISOString(),
-          content: emailContent
-        }
-      ]
-    }
-    onUpdateDocument(updatedDocument)
-    setShowEmailForm(false)
-  }
-
-  const handleSavePhoneReminder = () => {
-    if (phoneNote.trim()) {
-      const updatedDocument = {
-        ...document,
-        reminders: [
-          ...(document.reminders || []),
-          {
-            id: (document.reminders?.length || 0) + 1,
-            type: 'phone',
-            date: new Date().toISOString(),
-            content: phoneNote
-          }
-        ]
-      }
-      onUpdateDocument(updatedDocument)
-      setPhoneNote('')
-      setShowPhoneForm(false)
-    }
-  }
-
-  const handleDownload = async (filePath) => {
+  const handleSendEmailReminder = async () => {
     try {
-      const response = await fetch(`/api/documents/download`, {
+      const response = await fetch(`/api/documents/reminder/${document.id}`, {
         method: 'POST',
-        body: JSON.stringify({ filePath })
-      })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'email',
+          content: emailContent
+        })
+      });
+
       if (!response.ok) {
-        throw new Error('Failed to fetch file')
+        throw new Error('Failed to save reminder');
       }
-      const blob = await response.blob()
-      const url = URL.createObjectURL(blob)
-      // Open in new tab
-      window.open(url, '_blank')
-      // Clean up the URL object after opening
-      setTimeout(() => URL.revokeObjectURL(url), 100)
-    } catch (err) {
-      console.error('Error downloading file:', err)
+
+      const newReminder = await response.json();
+      setReminders(prevReminders => [...prevReminders, newReminder]);
+      setShowEmailForm(false);
+    } catch (error) {
+      console.error('Error saving reminder:', error);
+      // You may want to show an error message to the user here
+    }
+  }
+
+  const handleSavePhoneReminder = async () => {
+    if (phoneNote.trim()) {
+      try {
+        const response = await fetch(`/api/documents/reminder/${document.id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: 'phone',
+            content: phoneNote
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save reminder');
+        }
+
+        const newReminder = await response.json();
+        setReminders(prevReminders => [...prevReminders, newReminder]);
+        setPhoneNote('');
+        setShowPhoneForm(false);
+      } catch (error) {
+        console.error('Error saving reminder:', error);
+        // You may want to show an error message to the user here
+      }
     }
   }
 
@@ -191,7 +181,7 @@ L'équipe VOID`)
                   <span className="font-medium">Projet :</span> {document.project}
                 </p>
                 <p className="text-sm text-gray-600">
-                  <span className="font-medium">Date de création :</span> {new Date(document.date).toLocaleDateString()}
+                  <span className="font-medium">Date de création :</span> {new Date(document.sent_at).toLocaleDateString()}
                 </p>
                 <p className="text-sm text-gray-600">
                   <span className="font-medium">Statut :</span>{' '}
@@ -200,9 +190,9 @@ L'équipe VOID`)
                     {document.status === 'signed' ? 'Signé' : 'En attente'}
                   </span>
                 </p>
-                {document.signedAt && (
+                {document.signed_at && (
                   <p className="text-sm text-gray-600">
-                    <span className="font-medium">Date de signature :</span> {new Date(document.signedAt).toLocaleDateString()}
+                    <span className="font-medium">Date de signature :</span> {new Date(document.signed_at).toLocaleDateString()}
                   </p>
                 )}
               </div>
@@ -212,15 +202,23 @@ L'équipe VOID`)
               <h3 className="font-medium text-gray-900 mb-2">Document original</h3>
               <div className="flex items-center justify-between">
                 <button
-                  onClick={() => { console.log(document.file.storage_path); handleDownload(document.file.storage_path) }}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  onClick={() => downloadFile(document.original_file)}
+                  disabled={isLoading}
+                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <DocumentIcon className="h-5 w-5 mr-2" />
-                  Visualiser
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-700 mr-2" />
+                      Téléchargement...
+                    </>
+                  ) : (
+                    <>
+                      <DocumentIcon className="h-5 w-5 mr-2" />
+                      Visualiser
+                    </>
+                  )}
                 </button>
-                {!document.signedFile && <div>
+                {document.status !== "signed" && <div>
                   <label className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer">
                     <PencilIcon className="h-5 w-5 mr-2" />
                     Éditer
@@ -231,7 +229,6 @@ L'équipe VOID`)
                     />
                   </label>
                 </div>}
-
               </div>
               {editedOriginalFile && (
                 <div className="mt-2">
@@ -246,45 +243,7 @@ L'équipe VOID`)
               )}
             </div>
 
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="font-medium text-gray-900 mb-2">Document signé</h3>
-              {document.status === 'signed' ? (
-                <a
-                  href={document.signedFileUrl || document.fileUrl}
-                  download
-                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
-                  Télécharger
-                </a>
-              ) : (
-                <div>
-                  <p className="text-sm text-yellow-600 mb-2">Le document n&apos;a pas encore été signé par le client.</p>
-                  <div>
-                    <label className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer">
-                      <ArrowUpTrayIcon className="h-5 w-5 mr-2" />
-                      Uploader le document signé
-                      <input
-                        type="file"
-                        className="hidden"
-                        onChange={handleSignedFileUpload}
-                      />
-                    </label>
-                  </div>
-                  {uploadedSignedFile && (
-                    <div className="mt-2">
-                      <p className="text-sm text-green-600">Fichier sélectionné : {uploadedSignedFile.name}</p>
-                      <button
-                        onClick={handleSaveSignedFile}
-                        className="mt-2 inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-void hover:bg-void-light"
-                      >
-                        Enregistrer
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            <SignedDocument document={document} onUpdateDocument={onUpdateDocument} />
           </div>
 
           {/* Colonne de droite - Transfert et relances */}
@@ -418,14 +377,18 @@ L'équipe VOID`)
               )}
 
               <div className="space-y-3 max-h-60 overflow-y-auto">
-                {document.reminders && document.reminders.length > 0 ? (
-                  document.reminders.sort((a, b) => new Date(b.date) - new Date(a.date)).map(reminder => (
-                    <div key={reminder.id} className="flex items-start space-x-3 p-2 border-l-2 border-void">
+                {loadingReminders ? (
+                  <p className="text-sm text-gray-500">Chargement des relances...</p>
+                ) : reminderError ? (
+                  <p className="text-sm text-red-500">Erreur: {reminderError}</p>
+                ) : reminders.length > 0 ? (
+                  reminders.map(reminder => (
+                    <div key={reminder.id} className="flex items-start space-x-3 p-4 bg-gray-100 rounded-md ">
                       <div className="flex-shrink-0 h-8 w-8 rounded-full bg-void-light flex items-center justify-center">
                         {reminder.type === 'email' ? (
-                          <EnvelopeIcon className="h-4 w-4 text-void" />
+                          <EnvelopeIcon className="h-4 w-4 text-white" />
                         ) : (
-                          <PhoneIcon className="h-4 w-4 text-void" />
+                          <PhoneIcon className="h-4 w-4 text-white" />
                         )}
                       </div>
                       <div className="flex-1">
@@ -434,7 +397,7 @@ L'équipe VOID`)
                             Relance {reminder.type === 'email' ? 'par email' : 'téléphonique'}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {new Date(reminder.date).toLocaleString()}
+                            {new Date(reminder.sent_at).toLocaleString()}
                           </p>
                         </div>
                         <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">
